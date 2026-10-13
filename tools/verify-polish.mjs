@@ -24,6 +24,10 @@ try {
     await page.goto("/settings");
     await expect(page.locator(".notice-card").filter({ hasText: /^正在加载/ })).toHaveCount(0);
     await expect(page.locator('.account-security input[autocomplete="current-password"]')).toHaveCount(0);
+    const preferences = page.locator(".settings-grid > .panel").first();
+    const lastPreference = await preferences.locator(".setting-row").last().boundingBox();
+    const savePreferences = await preferences.getByRole("button", { name: "保存偏好", exact: true }).boundingBox();
+    expect(savePreferences.y - lastPreference.y - lastPreference.height).toBeGreaterThanOrEqual(16);
     const rows = page.locator('.setting-row:has(> .rounded-select)');
     for (const row of await rows.all()) {
       const text = await row.locator(":scope > span").boundingBox();

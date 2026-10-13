@@ -364,6 +364,10 @@ button:disabled { cursor: not-allowed; opacity: .5; }
  .production-workspace .eyebrow, .production-workspace .section-eyebrow { font-size:.75rem; letter-spacing:.09em; line-height:1.7; }
  .production-workspace .top-actions { gap:.6rem; padding-top:.4rem; max-width:100%; }
  .production-workspace .language-button, .production-workspace .send-button { font-size:.85rem; min-height:2.75rem; padding:.65rem .85rem; line-height:1.4; white-space:normal; text-align:center; justify-content:center; flex-shrink:0; }
+  .production-workspace button { line-height:1.45; }
+  .production-workspace .auth-input { line-height:1.5; }
+  .production-workspace .settings-grid > .panel > .send-button,
+  .production-workspace .settings-grid > .panel > .language-button { margin-top:1.25rem; }
  .production-workspace .top-actions .language-button { white-space:nowrap; }
  .production-workspace .icon-button { min-width:2.75rem; min-height:2.75rem; flex-shrink:0; }
  .production-workspace .auth-input { font:inherit; line-height:1.5; min-height:2.75rem; min-width:0; }
