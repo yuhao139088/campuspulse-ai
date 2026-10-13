@@ -1,0 +1,104 @@
+import { chromium, expect } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+
+const output = ".deployment-private/polish-review";
+await mkdir(output, { recursive: true });
+const browser = await chromium.launch({ headless: true });
+const context = await browser.newContext({ baseURL: "https://cam.yuhaocloud.cn", viewport: { width: 1440, height: 1000 } });
+try {
+  const fixture = JSON.parse(await readFile(".deployment-private/layout-fixture.json", "utf8"));
+  const page = await context.newPage();
+  await page.goto("/login");
+  await page.locator('input[autocomplete="username"]').fill(fixture.email);
+  await page.locator('input[autocomplete="current-password"]').fill(fixture.password);
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.waitForURL(/\/dashboard$/, { timeout: 45000 });
+  const spaces = await (await context.request.get("/api/spaces")).json();
+  const team = spaces.spaces.find((space) => space.slug === "campuspulse-team");
+  await context.request.patch("/api/spaces", { data: { id: team.id } });
+  const failures = []; page.on("pageerror", (error) => failures.push(error.message));
+  await page.addInitScript(() => localStorage.setItem("campuspulse.locale", "zh"));
+  for (const width of [1440, 1092, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/settings");
+    await expect(page.locator(".notice-card").filter({ hasText: /^正在加载/ })).toHaveCount(0);
+    await expect(page.locator('.account-security input[autocomplete="current-password"]')).toHaveCount(0);
+    const rows = page.locator('.setting-row:has(> .rounded-select)');
+    for (const row of await rows.all()) {
+      const text = await row.locator(":scope > span").boundingBox();
+      const select = await row.locator("button[role=combobox]").boundingBox();
+      expect(select.x).toBeGreaterThan(text.x + text.width - 2);
+      expect(Math.abs(select.y + select.height / 2 - text.y - text.height / 2)).toBeLessThan(8);
+    }
+    expect(await page.locator('input[role="switch"]').first().evaluate((element) => getComputedStyle(element).appearance)).toBe("none");
+    for (const row of await page.locator('.setting-row:has(input[role="switch"])').all()) {
+      const label = await row.locator(":scope > span").boundingBox();
+      const toggle = await row.getByRole("switch").boundingBox();
+      expect(toggle.x).toBeGreaterThan(label.x + label.width - 2);
+      expect(Math.abs(toggle.y + toggle.height / 2 - label.y - label.height / 2)).toBeLessThan(8);
+    }
+    await expect(page.locator('.account-security input[type="password"]')).toHaveCount(0);
+    await page.getByRole("button", { name: "更新密码", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "验证当前身份" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "验证方式", exact: true })).toBeVisible();
+    await page.getByRole("combobox", { name: "验证方式", exact: true }).click();
+    expect(await page.getByRole("listbox").evaluate((element) => !!element.closest("dialog"))).toBe(true);
+    const code = await page.locator(".identity-code-row").boundingBox();
+    const submit = await page.getByRole("button", { name: "验证并继续", exact: true }).boundingBox();
+    expect(submit.y - code.y - code.height).toBeGreaterThanOrEqual(20);
+    await page.screenshot({ path: output + `/identity-${width}.png`, fullPage: true });
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "关闭验证窗口", exact: true }).click();
+    const invitation = page.getByRole("heading", { name: "接受社团邀请", exact: true });
+    const invitationBounds = await invitation.boundingBox();
+    const service = await page.locator(".settings-grid .panel").last().locator(".setting-row").last().boundingBox();
+    expect(invitationBounds.y - service.y - service.height).toBeGreaterThanOrEqual(24);
+    await page.screenshot({ path: output + `/settings-${width}.png`, fullPage: true });
+    await page.goto("/reports");
+    await expect(page.locator(".notice-card").filter({ hasText: /^正在加载/ })).toHaveCount(0);
+    const add = page.getByRole("button", { name: "新建报告", exact: true });
+    const bounds = await add.boundingBox(); const icon = await add.locator("svg").boundingBox();
+    expect(Math.abs(bounds.x + bounds.width / 2 - icon.x - icon.width / 2)).toBeLessThan(2);
+    expect(Math.abs(bounds.y + bounds.height / 2 - icon.y - icon.height / 2)).toBeLessThan(2);
+    expect(await page.locator("textarea.auth-input").evaluate((element) => parseFloat(getComputedStyle(element).paddingTop))).toBeGreaterThanOrEqual(14);
+    await page.getByRole("button", { name: "上线验收数据分析报告", exact: true }).click();
+    await expect(page.locator(".report-history")).toBeVisible();
+    const history = await page.locator(".report-history").boundingBox();
+    const deletion = await page.getByRole("button", { name: "删除报告", exact: true }).boundingBox();
+    expect(deletion.y - history.y - history.height).toBeGreaterThanOrEqual(20);
+    await page.screenshot({ path: output + `/reports-${width}.png`, fullPage: true });
+    await page.goto("/admin");
+    await expect(page.locator(".notice-card").filter({ hasText: /^正在加载/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "成员与邀请", exact: true }).click();
+    const table = await page.locator(".admin-table").boundingBox();
+    const heading = await page.getByRole("heading", { name: "邀请成员", exact: true }).boundingBox();
+    expect(heading.y - table.y - table.height).toBeGreaterThanOrEqual(24);
+    await page.getByRole("button", { name: "安全策略", exact: true }).click();
+    const role = page.locator('.setting-row').filter({ hasText: "新成员默认权限" });
+    const label = await role.locator(":scope > span").boundingBox();
+    const select = await role.getByRole("combobox").boundingBox();
+    expect(Math.abs(select.y + select.height / 2 - label.y - label.height / 2)).toBeLessThan(8);
+    await role.getByRole("combobox").click();
+    expect((await page.getByRole("listbox").boundingBox()).width).toBeGreaterThanOrEqual(200);
+    expect(await page.getByRole("option", { name: "查看者", exact: true }).locator("span").evaluate((element) => { const range = document.createRange(); range.selectNodeContents(element); return range.getClientRects().length; })).toBe(1);
+    await page.screenshot({ path: output + `/default-role-${width}.png`, fullPage: true });
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "平台管理", exact: true }).click();
+    await expect(page.locator(".system-form textarea").first()).toBeVisible();
+    expect(await page.locator(".system-form textarea").first().evaluate((element) => parseFloat(getComputedStyle(element).paddingTop))).toBeGreaterThanOrEqual(14);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true);
+  }
+  const intent = { action: "password" };
+  const noProof = await context.request.post("/api/security", { data: { intent } });
+  expect(noProof.status()).toBe(400);
+  const noHuman = await context.request.post("/api/security/verify", { data: { stage: "send", method: "email", intent } });
+  expect(noHuman.status()).toBe(400);
+  const noHumanConfirm = await context.request.post("/api/security/verify", { data: { stage: "verify", method: "email", intent, code: "123456" } });
+  expect(noHumanConfirm.status()).toBe(400);
+  const unlinked = await context.request.post("/api/security/verify", { data: { stage: "verify", method: "sms", intent, code: "123456" } });
+  expect(unlinked.status()).toBe(403);
+  expect(failures).toEqual([]);
+  console.log("Layout coordinates, padded textareas, centered SVG, history/invitation spacing, themed switches and linked-only dialog passed at desktop/tablet/mobile widths");
+  console.log("Production refuses missing action proof, absent normal/invisible human tickets and unlinked methods; no actual user changes or messages");
+} finally { await context.close(); await browser.close(); }

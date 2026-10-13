@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id String @id @default(cuid())
+  name String?
+  email String? @unique
+  emailVerified DateTime?
+  passwordHash String?
+  globalRole String @default("USER")
+  disabled Boolean @default(false)
+  preferences Json?
+  phone String? @unique
+  phoneVerified DateTime?
+  authVersion Int @default(0)
+  totpSecret String?
+  totpPendingSecret String?
+  totpPendingExpires DateTime?
+  totpEnabled Boolean @default(false)
+  totpLastStep BigInt?
+  recoveryCodes Json?
+  image String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  accounts Account[]
+  sessions Session[]
+  memberships Membership[]
+  datasets Dataset[]
+  reports Report[]
+}
+model Account {
+  id String @id @default(cuid())
+  userId String
+  type String
+  provider String
+  providerAccountId String
+  refresh_token String? @db.Text
+  access_token String? @db.Text
+  expires_at Int?
+  token_type String?
+  scope String?
+  id_token String? @db.Text
+  session_state String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+model Session {
+  id String @id @default(cuid())
+  sessionToken String @unique
+  userId String
+  expires DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model VerificationToken {
+  identifier String
+  token String @unique
+  expires DateTime
+  @@unique([identifier, token])
+}
+model Space {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  type SpaceType @default(PERSONAL)
+  settings Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  memberships Membership[]
+  datasets Dataset[]
+  reports Report[]
+}
+enum SpaceType {
+  PERSONAL
+  CLUB
+  ADMIN
+}
+enum MembershipRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+  ADVISOR
+}
+model Membership {
+  id String @id @default(cuid())
+  userId String
+  spaceId String
+  role MembershipRole @default(VIEWER)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  @@unique([userId, spaceId])
+}
+model Dataset {
+  id String @id @default(cuid())
+  name String
+  description String?
+  sourceType DatasetSource
+  status DatasetStatus @default(READY)
+  rowCount Int @default(0)
+  columnCount Int @default(0)
+  healthScore Float?
+  objectKey String?
+  ownerId String
+  spaceId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner User @relation(fields: [ownerId], references: [id])
+  space Space @relation(fields: [spaceId], references: [id])
+  analyses Analysis[]
+  evidence Evidence[]
+  reports Report[]
+}
+enum DatasetSource {
+  CSV
+  EXCEL
+  IMAGE
+  SCREENSHOT
+  DEMO
+}
+enum DatasetStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  ERROR
+}
+model Analysis {
+  id String @id @default(cuid())
+  prompt String @db.Text
+  answer String @db.Text
+  locale String @default("zh")
+  model String?
+  tools Json?
+  evidence Json?
+  result Json?
+  datasetId String?
+  userId String
+  createdAt DateTime @default(now())
+  dataset Dataset? @relation(fields: [datasetId], references: [id])
+}
+model Evidence {
+  id String @id @default(cuid())
+  datasetId String
+  label String
+  kind String
+  content Json
+  confidence Float?
+  createdAt DateTime @default(now())
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+}
+model Report {
+  id String @id @default(cuid())
+  title String
+  locale String @default("zh")
+  format String @default("pdf")
+  content Json
+  userId String
+  spaceId String
+  datasetId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner User @relation(fields: [userId], references: [id])
+  space Space @relation(fields: [spaceId], references: [id])
+  dataset Dataset? @relation(fields: [datasetId], references: [id])
+}
+
+model Canvas {
+  id String @id @default(cuid())
+  userId String
+  spaceId String
+  config Json
+  updatedAt DateTime @updatedAt
+  @@unique([userId, spaceId])
+}
+
+model Invitation {
+  id String @id @default(cuid())
+  spaceId String
+  email String
+  name String?
+  role MembershipRole @default(VIEWER)
+  token String @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  userId String
+  spaceId String
+  action String
+  detail Json?
+  createdAt DateTime @default(now())
+  @@index([spaceId, createdAt])
+}
+
+model ReportVersion {
+  id String @id @default(cuid())
+  reportId String
+  number Int
+  content Json
+  createdAt DateTime @default(now())
+  @@unique([reportId, number])
+}
+
+model ActionTask {
+  id String @id @default(cuid())
+  spaceId String
+  userId String
+  title String
+  status String @default("OPEN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  id String @id
+  value Json
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationCode {
+  id String @id @default(cuid())
+  channel String
+  purpose String
+  target String
+  userId String?
+  hash String
+  delivery Json?
+  attempts Int @default(0)
+  usedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([target, channel, purpose, createdAt])
+}
+
+
+
+
+

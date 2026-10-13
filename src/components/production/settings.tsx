@@ -1,0 +1,23 @@
+"use client";
+import { useEffect, useState } from "react";
+import { RoundedSelect } from "@/components/rounded-select";
+import { WorkspaceShell } from "@/components/workspace-shell";
+import { request, useResource, useText, Notice } from "./shared";
+import { useRouter } from "next/navigation";
+import { writeLocale } from "@/lib/locale";
+import AccountSecurity from "./account-security";
+
+export default function ProductionSettings(){
+  const router = useRouter();
+  const {text,locale}=useText();
+  const resource=useResource<{preferences:{theme?:"dark"|"light";motion?:boolean;notifications?:boolean;locale?:"zh"|"en"};aiConfigured:boolean;model:string;storageConfigured:boolean}>("/api/preferences");
+  const [theme,setTheme]=useState<"dark"|"light">("dark");
+  const [motion,setMotion]=useState(true);
+  const [notifications,setNotifications]=useState(true);
+  const [invite,setInvite]=useState("");
+  const [notice,setNotice]=useState("");
+  const [failure,setFailure]=useState("");
+  const [busy,setBusy]=useState(false);
+  useEffect(()=>{request<{preferences:{theme?:"dark"|"light";motion?:boolean;notifications?:boolean}}>("/api/preferences").then(({preferences})=>{if(preferences?.theme)setTheme(preferences.theme);if(typeof preferences?.motion==="boolean")setMotion(preferences.motion);if(typeof preferences?.notifications==="boolean")setNotifications(preferences.notifications);}).catch(()=>undefined);const token=new URLSearchParams(window.location.search).get("invite");if(token){const timer=setTimeout(()=>setInvite(token),0);return()=>clearTimeout(timer);}},[]);
+  return <WorkspaceShell production active="/settings" title="" subtitle=""><Notice error={failure||resource.error} loading={resource.loading}/><div className="settings-grid"><section className="panel panel-pad"><h2>{text("个人偏好","Personal preferences")}</h2><label className="setting-row"><span>{text("界面语言","Interface language")}</span><RoundedSelect className="auth-input" value={locale} onChange={(event)=>writeLocale(event.target.value==="en"?"en":"zh")}><option value="zh">{text("中文","Chinese")}</option><option value="en">English</option></RoundedSelect></label><label className="setting-row"><span>{text("主题","Theme")}</span><RoundedSelect className="auth-input" value={theme} onChange={(event)=>{const next=event.target.value==="light"?"light":"dark";setTheme(next);document.documentElement.dataset.theme=next;localStorage.setItem("campuspulse-theme",next);}}><option value="dark">{text("深色","Dark")}</option><option value="light">{text("浅色","Light")}</option></RoundedSelect></label><label className="setting-row"><span>{text("动效","Motion")}</span><input type="checkbox" role="switch" checked={motion} onChange={(event)=>{setMotion(event.target.checked);document.documentElement.dataset.motion=event.target.checked?"enabled":"reduced";localStorage.setItem("campuspulse-motion",event.target.checked?"enabled":"reduced");}}/></label><label className="setting-row"><span>{text("工作空间通知","Workspace notifications")}</span><input type="checkbox" role="switch" checked={notifications} onChange={(event)=>setNotifications(event.target.checked)}/></label><button className="send-button" disabled={busy} onClick={async()=>{setBusy(true);try{await request("/api/preferences","PUT",{locale,theme,motion,notifications});setNotice(text("偏好已保存","Preferences saved"));}catch(problem){setFailure(String(problem));}finally{setBusy(false);}}}>{text("保存偏好","Save preferences")}</button>{notice&&<div className="notice-card">{notice}</div>}</section><section className="panel panel-pad"><h2>{text("服务连接","Service connections")}</h2><div className="setting-row"><span>Carbon AI · {resource.data?.model}</span><span className="status-badge ready">{resource.data?.aiConfigured?text("已配置","Configured"):text("未配置","Not configured")}</span></div><div className="setting-row"><span>{text("私有文件存储","Private file storage")}</span><span className="status-badge ready">{resource.data?.storageConfigured?text("已配置","Configured"):text("未配置","Not configured")}</span></div><h3>{text("接受社团邀请","Accept workspace invitation")}</h3><input className="auth-input" value={invite} onChange={(event)=>setInvite(event.target.value)} placeholder={text("邀请 token 或邀请链接","Invitation token or link")}/><button className="send-button admin-save-button" disabled={!invite||busy} onClick={async()=>{setBusy(true);try{const token=invite.startsWith("http")?new URL(invite).searchParams.get("invite"):invite;await request("/api/invitations","POST",{token});router.push("/dashboard");router.refresh();}catch(problem){setFailure(String(problem));}finally{setBusy(false);}}}>{text("接受邀请","Accept invitation")}</button></section></div><AccountSecurity/></WorkspaceShell>;
+}

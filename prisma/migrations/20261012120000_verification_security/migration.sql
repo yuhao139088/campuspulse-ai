@@ -1,0 +1,5 @@
+ALTER TABLE "User" ADD COLUMN "phone" TEXT, ADD COLUMN "phoneVerified" TIMESTAMP(3), ADD COLUMN "authVersion" INTEGER NOT NULL DEFAULT 0, ADD COLUMN "totpSecret" TEXT, ADD COLUMN "totpPendingSecret" TEXT, ADD COLUMN "totpPendingExpires" TIMESTAMP(3), ADD COLUMN "totpEnabled" BOOLEAN NOT NULL DEFAULT false, ADD COLUMN "totpLastStep" BIGINT, ADD COLUMN "recoveryCodes" JSONB;
+CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
+CREATE TABLE "SystemConfig" ("id" TEXT PRIMARY KEY, "value" JSONB NOT NULL, "updatedAt" TIMESTAMP(3) NOT NULL);
+CREATE TABLE "VerificationCode" ("id" TEXT PRIMARY KEY, "channel" TEXT NOT NULL, "purpose" TEXT NOT NULL, "target" TEXT NOT NULL, "userId" TEXT, "hash" TEXT NOT NULL, "attempts" INTEGER NOT NULL DEFAULT 0, "usedAt" TIMESTAMP(3), "expiresAt" TIMESTAMP(3) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX "VerificationCode_target_channel_purpose_createdAt_idx" ON "VerificationCode"("target", "channel", "purpose", "createdAt");

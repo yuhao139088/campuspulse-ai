@@ -1,0 +1,11 @@
+import sharp from "sharp";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve, join } from "node:path";
+const destination = resolve(process.argv[2]);
+await mkdir(destination, { recursive: true });
+const image = '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900"><rect width="1280" height="900" fill="#edf5f8"/><rect x="50" y="50" width="1180" height="800" rx="24" fill="white"/><g font-family="Arial" fill="#153449"><text x="100" y="155" font-size="54" font-weight="bold">CampusPulse Workshop</text><text x="100" y="235" font-size="30">SYNTHETIC OCR TEST MATERIAL</text><text x="100" y="330" font-size="40">Date: 2026-10-12</text><text x="100" y="420" font-size="40">Registrations: 56</text><text x="100" y="510" font-size="40">Check-ins: 43</text><text x="100" y="600" font-size="40">Budget: 1280 CNY</text><text x="100" y="690" font-size="40">Location: Campus Hall</text><text x="100" y="780" font-size="26">These are generated test values, not actual event records.</text></g></svg>';
+await sharp(Buffer.from(image)).png().toFile(join(destination, "07-ocr-workshop.png"));
+await sharp(Buffer.from(image)).jpeg({ quality: 88 }).toFile(join(destination, "08-活动签到预算证据_用于验证超长文件名自动换行与OCR识别_请核对报名56签到43预算1280_图片内容为原创测试数据.jpg"));
+await sharp({ create: { width: 600, height: 400, channels: 3, background: "white" } }).png().toFile(join(destination, "09-blank-image-no-evidence.png"));
+await writeFile(join(destination, "10-unsupported-file.txt"), "This file should be rejected by the data import endpoint.\n");
+console.log("Created original OCR and import validation fixtures");

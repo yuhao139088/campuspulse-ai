@@ -1,0 +1,13 @@
+ALTER TABLE "User" ADD COLUMN "globalRole" TEXT NOT NULL DEFAULT 'USER', ADD COLUMN "disabled" BOOLEAN NOT NULL DEFAULT false, ADD COLUMN "preferences" JSONB;
+ALTER TABLE "Space" ADD COLUMN "settings" JSONB;
+ALTER TABLE "Analysis" ADD COLUMN "result" JSONB;
+ALTER TYPE "MembershipRole" ADD VALUE 'ADVISOR';
+CREATE TABLE "Canvas" ("id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL, "spaceId" TEXT NOT NULL, "config" JSONB NOT NULL, "updatedAt" TIMESTAMP(3) NOT NULL);
+CREATE UNIQUE INDEX "Canvas_userId_spaceId_key" ON "Canvas"("userId", "spaceId");
+CREATE TABLE "Invitation" ("id" TEXT PRIMARY KEY, "spaceId" TEXT NOT NULL, "email" TEXT NOT NULL, "name" TEXT, "role" "MembershipRole" NOT NULL DEFAULT 'VIEWER', "token" TEXT NOT NULL, "expiresAt" TIMESTAMP(3) NOT NULL, "acceptedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX "Invitation_token_key" ON "Invitation"("token");
+CREATE TABLE "AuditLog" ("id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL, "spaceId" TEXT NOT NULL, "action" TEXT NOT NULL, "detail" JSONB, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX "AuditLog_spaceId_createdAt_idx" ON "AuditLog"("spaceId", "createdAt");
+CREATE TABLE "ReportVersion" ("id" TEXT PRIMARY KEY, "reportId" TEXT NOT NULL, "number" INTEGER NOT NULL, "content" JSONB NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX "ReportVersion_reportId_number_key" ON "ReportVersion"("reportId", "number");
+CREATE TABLE "ActionTask" ("id" TEXT PRIMARY KEY, "spaceId" TEXT NOT NULL, "userId" TEXT NOT NULL, "title" TEXT NOT NULL, "status" TEXT NOT NULL DEFAULT 'OPEN', "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL);

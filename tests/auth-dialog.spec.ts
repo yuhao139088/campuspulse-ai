@@ -1,0 +1,32 @@
+import { expect, test } from "@playwright/test";
+test("2FA appears only after the first step and recovery uses the same dialog", async ({ page }) => {
+  await page.goto("/login");
+  await page.route("**/api/auth/check", (route) => route.fulfill(route.request().postDataJSON().password === "incorrect" ? { status: 401, json: { error: "账号或登录凭据无效" } } : { json: { requires2FA: true } }));
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByText("2FA认证码或恢复码", { exact: true })).toHaveCount(0);
+  await page.locator('input[autocomplete="username"]').fill("demo@campuspulse.local");
+  await page.locator('input[autocomplete="current-password"]').fill("incorrect");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await expect(page.locator(".auth-error")).toContainText("账号或登录凭据无效");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.locator('input[autocomplete="current-password"]').fill("CampusPulse2026!");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "二次身份验证" })).toBeVisible();
+  await expect(page.getByLabel("6位认证码", { exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "使用恢复码", exact: true }).click();
+  await expect(page.getByLabel("恢复码", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "关闭验证窗口", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/login$/);
+});
+test("password recovery verifies primary code before presenting 2FA", async ({ page }) => {
+  await page.goto("/reset-password");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.route("**/api/auth/reset-password", (route) => route.fulfill({ status: 202, json: { requires2FA: true } }));
+  await page.locator('input[autocomplete="username"]').fill("demo@campuspulse.local");
+  await page.getByLabel("验证码", { exact: true }).fill("123456");
+  await page.getByLabel("新密码", { exact: true }).fill("ChangedPassword123!");
+  await page.getByRole("button", { name: "更新密码", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "二次身份验证" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "使用恢复码", exact: true })).toBeVisible();
+});
