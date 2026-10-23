@@ -1,12 +1,62 @@
-# 5–8 Minute Demo Script
+# CampusPulse AI 视频稿（约 7 分钟）
 
-1. **0:00–0:40** — Introduce CampusPulse AI and the university-club operations problem.
-2. **0:40–1:30** — Enter the bilingual workspace and show the club data health overview.
-3. **1:30–2:20** — Import `data/demo/club-operations.csv` and an authorized event screenshot; point out tabular preview and evidence queue.
-4. **2:20–3:45** — Ask “为什么11月签到下降？” and show the Agent tool trace: inspect, profile, aggregate, detect anomaly and action plan.
-5. **3:45–4:40** — Explain the 76% conversion, the November low outlier and evidence-first confidence score.
-6. **4:40–5:40** — Switch to English, show the same workspace and bilingual Agent response.
-7. **5:40–6:50** — Open the report entry point and describe PDF/Markdown export, evidence embedding and versioning.
-8. **6:50–7:30** — Explain privacy, secret handling, role spaces and the deployable Docker/Nginx architecture.
+## 录制前准备
 
-Use only original simulated data in the recording. Do not show API keys, personal files or unapproved third-party assets.
+- 使用项目中的原创模拟素材，不使用真实学生数据、生产账号、API Key、服务器终端或个人文件。
+- 浏览器打开本地项目或已授权的演示环境；提前准备 `data/demo/club-operations.csv`。
+- 录制画面只展示产品页面和脱敏的示例结果。
+
+## 0:00–0:40｜问题与产品定位
+
+画面：产品首页和 CampusPulse AI 标识。
+
+旁白：高校社团运营通常同时面对报名、签到、预算、问卷和活动截图，数据分散、复盘耗时，结论也很难追溯。CampusPulse AI 将这些资料放进同一个双语工作空间，让团队从查看报表走向有证据的行动决策。
+
+## 0:40–1:20｜进入工作台
+
+画面：登录后进入总览，展示数据集数量、分析次数、发现的洞察和数据健康度。
+
+旁白：工作台先给出当前空间的运营概览。每个指标都来自当前空间的数据，系统不会把固定的演示数字伪装成真实业务结果。用户可以在中文和英文之间切换，适应不同团队成员的使用习惯。
+
+## 1:20–2:10｜导入表格与图片证据
+
+画面：进入数据空间，导入 `data/demo/club-operations.csv`；展示字段预览、质量状态和图片证据入口。
+
+旁白：现在导入一份原创的社团运营数据。系统自动识别字段、展示预览，并提示缺失值、重复行和异常候选。表格之外，活动海报和签到截图也可以进入证据队列，后续与结构化数据一起被分析。
+
+## 2:10–3:40｜AI Agent 分析
+
+画面：进入 AI 分析，提问“为什么 11 月签到下降？请给出证据和行动建议”。展开工具调用和结果卡片。
+
+旁白：这里不是直接生成一段没有来源的文字。Agent 会按步骤调用数据集画像、字段检查、聚合、异常检测和行动计划工具。结果中同时展示事实、证据、置信度和建议，帮助使用者区分数据已经证明的内容与需要人工复核的推断。
+
+画面：展示报名、签到、转化率、异常月份和建议列表。
+
+旁白：例如，系统可以从报名和签到数据计算转化率，识别低于趋势的月份，再结合活动证据提出提醒触达、课程冲突和现场核验等后续动作。
+
+## 3:40–4:30｜图表画布
+
+画面：打开图表画布，点击 AI 图表建议，导入折线图或柱状图，展示删除、保存和 PNG 导出。
+
+旁白：分析结果可以直接进入图表画布。AI 推荐的图表能够一键导入，用户还可以调整组件、保存画布并导出 PNG，把分析结论变成团队可以复用的数据故事。
+
+## 4:30–5:20｜行动与报告
+
+画面：打开行动建议或报告中心，生成中文报告，再切换英文；展示编辑、版本历史、Markdown/DOCX 下载和打印 PDF。
+
+旁白：结论不会停留在聊天窗口。团队可以把建议转成行动任务，并生成双语报告。报告支持编辑、历史版本、Markdown 和 DOCX 下载，也可以通过浏览器打印为 PDF，方便提交和分享。
+
+## 5:20–6:10｜协作与安全
+
+画面：展示管理员空间、成员权限、审计日志和设置入口，不打开真实密钥字段。
+
+旁白：个人空间与社团空间按权限隔离，管理员可以配置 AI、存储和认证策略。密码和验证码不会写入公开代码；文件保存在私有存储，敏感操作需要已绑定的邮箱、手机号或 Authenticator 方式验证，并保留审计线索。
+
+## 6:10–7:00｜技术与价值总结
+
+画面：回到首页，展示架构示意或 README 的技术栈片段。
+
+旁白：项目采用 Next.js、TypeScript、PostgreSQL、Prisma、S3 兼容存储和 OpenAI-compatible AI 接口，使用 Docker Compose 可以复现本地环境。CampusPulse AI 的核心价值，是把数据导入、AI 分析、证据追溯、可视化和团队交付串成一条完整链路，让每一次校园运营决策都有可复核的数据依据。
+
+结尾字幕：CampusPulse AI｜让每一次校园决策，都有可追溯的数据依据。
+

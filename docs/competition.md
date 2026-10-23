@@ -1,13 +1,24 @@
-# Competition delivery notes
+# Competition Delivery Notes
 
-## Product positioning
+## Submission scope
 
-CampusPulse is an AI-first bilingual decision workspace for university club operations. AI is present in ingestion, data profiling, evidence extraction, analysis, anomaly detection, recommendations and report generation.
+CampusPulse AI is an AI-first bilingual decision workspace for university club operations. The competition package contains the runnable source project, a public-facing README, a technical document PDF, a Mandarin video script, and original simulated test data. Internal deployment notes, production credentials, server addresses, browser state, security fixtures, private screenshots, and unrelated gateway projects are excluded.
 
 ## Competition alignment
 
-The product is designed around AI Agent, RAG, multimodal analysis, AI visualization and safety/traceability. The official submission package will include a public repository, README, environment template, complete dependency notes, 5–8 minute Mandarin demonstration video and a PDF technical document within the competition limit.
+The product demonstrates one complete AI workflow:
 
-## Planned deployment
+1. Import CSV, Excel, and image evidence into a workspace.
+2. Profile fields and data quality with deterministic tools.
+3. Ask a natural-language question through an AI Agent.
+4. Show tool calls, evidence references, anomaly detection, confidence, and actions.
+5. Turn the result into charts, tasks, and bilingual reports.
 
-Production target: CentOS Stream 9 x86_64, Docker, Nginx and BaoTa. Default public host is `campuspulse.yuhaocloud.cn`. Secrets remain server-side and are never committed.
+The project also includes workspace permissions, administrator configuration, private object storage integration, bilingual UI, responsive layouts, CAPTCHA-protected authentication, and audit-oriented security controls.
+
+## Submission limitations stated honestly
+
+- GitHub OAuth is intentionally outside this competition release; email/password and configured verification methods are the demonstrated login paths.
+- Live provider keys, real user records, production URLs, and deployment secrets are not part of the package.
+- AI output is evidence-oriented. The demo uses original simulated data and clearly labels the demo path; generated recommendations do not replace human review.
+

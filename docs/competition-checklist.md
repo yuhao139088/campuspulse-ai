@@ -1,16 +1,25 @@
 # Competition Delivery Checklist
 
-- [x] Public GitHub repository and README
-- [x] Bilingual responsive dashboard
-- [x] AI-first demo route with structured tool trace
-- [x] CSV/Excel/image import preview entry point
-- [x] Deterministic profiling, aggregation, anomaly and action-plan tools
-- [x] Prisma models for users, spaces, datasets, evidence, analyses and reports
-- [x] `.env.example` without real secrets
-- [x] Docker Compose, Dockerfile and Nginx/BaoTa guidance
-- [x] Original simulated demo data
-- [x] Animate.css reduced-motion policy
-- [ ] Live OAuth, object storage persistence and report export completion
-- [ ] Production Carbon AI evaluation, Playwright browser matrix and final video/PDF package
+## Included in the submission
 
-The unchecked items are the next implementation wave; the current repository is a runnable foundation with a complete end-to-end demo path.
+- [x] Public GitHub repository and project README
+- [x] Bilingual responsive product pages
+- [x] AI Agent workflow with structured tool trace and evidence references
+- [x] CSV, Excel, and image import preview entry points
+- [x] Data profiling, aggregation, anomaly detection, chart recommendation, and action-plan tools
+- [x] Prisma models and migrations for users, spaces, memberships, datasets, evidence, analyses, and reports
+- [x] `.env.example` containing placeholders only
+- [x] Dockerfile and Docker Compose for reproducible local deployment
+- [x] Original simulated data and reproducible test-material generation tools
+- [x] Private storage, workspace authorization, administrator controls, and audit-oriented security checks
+- [x] Bilingual reports with Markdown/DOCX export and print-to-PDF workflow
+- [x] Reduced-motion behavior and responsive layouts
+- [x] Automated unit, typecheck, lint, production build, and browser smoke checks
+- [x] Technical document PDF and 5–8 minute Mandarin video script
+
+## Deliberately outside this release
+
+- [ ] GitHub OAuth provider integration
+
+The release does not include real credentials, production database records, browser authentication state, private deployment files, or unrelated reverse-proxy projects.
+
