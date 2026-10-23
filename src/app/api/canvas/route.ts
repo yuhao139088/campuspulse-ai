@@ -11,7 +11,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const { user, space } = await workspaceAccess(true);
-    const config = z.object({ components: z.array(z.string().max(80)).max(30), chartType: z.string().max(80), datasetId: z.string().optional(), charts: z.array(z.object({ id: z.string(), title: z.string(), type: z.enum(["bar", "line", "pie"]), category: z.string(), metric: z.string(), aggregation: z.enum(["sum", "average", "count"]) })).max(30).optional() }).parse(await request.json());
+    const config = z.object({ components: z.array(z.string().max(80)).max(30), chartType: z.string().max(80), datasetId: z.string().optional(), charts: z.array(z.object({ id: z.string(), title: z.string(), type: z.enum(["bar", "line", "pie"]), category: z.string(), metric: z.string(), aggregation: z.enum(["sum", "average", "count"]), datasetId: z.string().max(80).optional() })).max(30).optional() }).parse(await request.json());
     if (!user.demo) {
       if (config.datasetId && !await prisma.dataset.findFirst({ where: { id: config.datasetId, spaceId: space.id } })) throw new ApiError(404, "Dataset not found");
       await prisma.canvas.upsert({ where: { userId_spaceId: { userId: user.id, spaceId: space.id } }, update: { config: config as Prisma.InputJsonValue }, create: { userId: user.id, spaceId: space.id, config: config as Prisma.InputJsonValue } });

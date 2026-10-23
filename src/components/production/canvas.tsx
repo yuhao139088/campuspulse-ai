@@ -6,11 +6,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BarChart3, ChartLine, ChartPie, Check, Plus, Sparkles } from "lucide-react";
 import { WorkspaceShell } from "@/components/workspace-shell";
-import { chartData, chartSignature, importChartRecommendations, normalizeChartRecommendations, type CanvasChart, type ChartRecommendation } from "@/lib/charts";
+import { chartData, chartMatchesColumns, chartSignature, chartsForDataset, importChartRecommendations, normalizeCanvasCharts, normalizeChartRecommendations, type CanvasChart, type ChartRecommendation } from "@/lib/charts";
 import { Dataset, DatasetSelect, useResource, request, useText, Notice } from "./shared";
 
 const Chart = dynamic(() => import("echarts-for-react"), { ssr: false });
-type Config = { components: string[]; chartType: string; datasetId: string; charts: CanvasChart[] };
+type Config = { components: string[]; chartType: string; datasetId: string; charts?: unknown };
 type Advice = { datasetId: string; answer: string; chartRecommendations: ChartRecommendation[] };
 const chartIcons = { bar: BarChart3, line: ChartLine, pie: ChartPie };
 
@@ -42,34 +42,20 @@ export default function ProductionCanvas() {
     request<{ config: Config | null }>("/api/canvas").then(({ config }) => {
       const fromUrl = new URLSearchParams(window.location.search).get("dataset");
       const initialDataset = fromUrl || config?.datasetId || "";
+      const stored = normalizeCanvasCharts(config?.charts, initialDataset);
+      const scoped = chartsForDataset(stored, initialDataset);
       currentDataset.current = initialDataset;
       setDatasetId(initialDataset);
-      setCharts(config?.charts ?? []);
-      setActive(config?.chartType ?? "");
+      setCharts(stored);
+      setActive((scoped.find((chart) => chart.id === config?.chartType) ?? scoped[0])?.id ?? "");
       setLoaded(true);
     }).catch((problem) => setFailure(String(problem)));
   }, []);
 
-  useEffect(() => {
-    if (!loaded) return;
-    const version = ++saveVersion.current;
-    const timer = window.setTimeout(() => {
-      setSaving(true);
-      saveQueue.current = saveQueue.current.catch(() => undefined).then(() =>
-        request("/api/canvas", "PUT", { components: charts.map((item) => item.id), chartType: active, datasetId, charts })
-      ).then(() => {
-        if (version === saveVersion.current) setNotice(locale === "zh" ? "已保存到云端" : "Saved to database");
-      }).catch((problem) => {
-        if (version === saveVersion.current) setFailure(String(problem));
-      }).finally(() => {
-        if (version === saveVersion.current) setSaving(false);
-      });
-    }, 500);
-    return () => window.clearTimeout(timer);
-  }, [charts, active, datasetId, loaded, locale]);
-
-  const datasetDocument = detail.data?.dataset.id === datasetId
-    ? detail.data.dataset.evidence?.find((item) => item.kind === "TABLE" || item.kind === "OCR")?.content
+  const datasetList = datasets.data?.datasets;
+  const detailData = detail.data;
+  const datasetDocument = detailData?.dataset.id === datasetId
+    ? detailData.dataset.evidence?.find((item) => item.kind === "TABLE" || item.kind === "OCR")?.content
     : undefined;
   const columns = datasetDocument?.columns ?? [];
   const rows = datasetDocument?.rows ?? [];
@@ -79,7 +65,28 @@ export default function ProductionCanvas() {
       return value !== null && value !== undefined && String(value).trim() !== "" && Number.isFinite(Number(value));
     }).length / rows.length >= 0.7
   );
-  const selected = charts.find((item) => item.id === active);
+  const scopedCharts = charts.filter((chart) => chart.datasetId === datasetId && (!datasetList?.length || datasetList.some((item) => item.id === chart.datasetId)));
+  const visibleCharts = columns.length ? scopedCharts.filter((chart) => chartMatchesColumns(chart, columns)) : scopedCharts;
+  const selected = visibleCharts.find((item) => item.id === active) ?? visibleCharts[0];
+  const activeId = selected?.id ?? "";
+
+  useEffect(() => {
+    if (!loaded) return;
+    const version = ++saveVersion.current;
+    const timer = window.setTimeout(() => {
+      setSaving(true);
+      saveQueue.current = saveQueue.current.catch(() => undefined).then(() =>
+        request("/api/canvas", "PUT", { components: charts.map((item) => item.id), chartType: activeId, datasetId, charts })
+      ).then(() => {
+        if (version === saveVersion.current) setNotice(locale === "zh" ? "已保存到云端" : "Saved to database");
+      }).catch((problem) => {
+        if (version === saveVersion.current) setFailure(String(problem));
+      }).finally(() => {
+        if (version === saveVersion.current) setSaving(false);
+      });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [charts, activeId, datasetId, loaded, locale]);
   const { labels, values } = selected ? chartData(rows, selected) : { labels: [], values: [] };
   const option = {
     tooltip: { trigger: selected?.type === "pie" ? "item" : "axis", confine: true },
@@ -92,13 +99,14 @@ export default function ProductionCanvas() {
   };
   const chartLabels = { bar: text("柱状图", "Bar chart"), line: text("折线图", "Line chart"), pie: text("饼图", "Pie chart") };
   const aggregationLabels = { sum: text("求和", "Sum"), average: text("平均值", "Average"), count: text("记录计数", "Row count") };
-  const signatures = new Set(charts.map(chartSignature));
+  const signatures = new Set(visibleCharts.map(chartSignature));
   const suggestions = advice?.datasetId === datasetId ? advice.chartRecommendations : [];
   const remainingSuggestions = suggestions.filter((chart) => !signatures.has(chartSignature(chart)));
 
   function chooseDataset(value: string) {
     currentDataset.current = value;
     setDatasetId(value);
+    setActive("");
     setAdvice(null);
     setCategory("");
     setMetric("");
@@ -131,7 +139,7 @@ export default function ProductionCanvas() {
   function importSuggestions(recommendations: ChartRecommendation[]) {
     if (advice?.datasetId !== currentDataset.current || !loaded) return;
     const valid = normalizeChartRecommendations(recommendations, columns, numericColumns);
-    const result = importChartRecommendations(charts, valid, () => crypto.randomUUID());
+    const result = importChartRecommendations(charts, valid, () => crypto.randomUUID(), currentDataset.current);
     if (!result.added.length) return;
     setFailure("");
     setNotice("");
@@ -155,18 +163,19 @@ export default function ProductionCanvas() {
       <label>{text("汇总方式", "Aggregation")}<RoundedSelect className="auth-input" value={aggregation} onChange={(event) => setAggregation(event.target.value as CanvasChart["aggregation"])}>{Object.entries(aggregationLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</RoundedSelect></label>
       <button className="send-button" disabled={!columns.includes(category) || (aggregation !== "count" && !numericColumns.includes(metric)) || charts.length >= 30} onClick={() => {
         const id = crypto.randomUUID();
-        setCharts((current) => [...current, { id, title: title.trim() || category, type, category, metric: aggregation === "count" ? "" : metric, aggregation }]);
+        setCharts((current) => [...current, { id, title: title.trim() || category, type, category, metric: aggregation === "count" ? "" : metric, aggregation, datasetId }]);
         setActive(id); setShowAdd(false); setNotice(""); setFailure(""); setSaving(true);
       }}>{text("创建图表", "Create chart")}</button>
     </section>}
     <div className="canvas-layout production-canvas">
       <aside className="panel panel-pad canvas-sidebar">
         <h3>{text("图表", "Charts")}</h3>
-        {charts.map((chart) => <div className="canvas-item-row" key={chart.id}>
-          <button className={"canvas-item " + (active === chart.id ? "active" : "")} onClick={() => setActive(chart.id)}>{chart.title}</button>
+        {!visibleCharts.length && <p className="page-muted">{datasetId ? text("当前数据集还没有图表，可以手动添加或导入AI推荐。", "No charts for this dataset yet. Create one or import an AI recommendation.") : text("先选择数据集，图表按数据集分别保存。", "Select a dataset first; charts are stored per dataset.")}</p>}
+        {visibleCharts.map((chart) => <div className="canvas-item-row" key={chart.id}>
+          <button className={"canvas-item " + (activeId === chart.id ? "active" : "")} onClick={() => setActive(chart.id)}>{chart.title}</button>
           <button className="canvas-delete" aria-label={text("删除图表 ", "Delete chart ") + chart.title} onClick={() => {
             const next = charts.filter((item) => item.id !== chart.id); setCharts(next);
-            if (active === chart.id) setActive(next[0]?.id ?? "");
+            if (active === chart.id) setActive("");
             setNotice(""); setSaving(true);
           }}>×</button>
         </div>)}
@@ -198,7 +207,7 @@ export default function ProductionCanvas() {
           const url = chartRef.current?.getDataURL({ type: "png", pixelRatio: 2, backgroundColor: "#07111e" });
           if (url) { const anchor = document.createElement("a"); anchor.href = url; anchor.download = selected.title + ".png"; anchor.click(); }
         }}>{text("导出 PNG", "Export PNG")}</button>}</div>
-        {selected ? <div className="board-chart"><Chart option={option} onChartReady={(chart) => { chartRef.current = chart; }} style={{ height: "100%", width: "100%" }} notMerge /></div> : <div className="report-empty">{text("选择数据集，手动添加图表或导入AI推荐。", "Select a dataset, then create a chart or import an AI recommendation.")}</div>}
+        {selected ? <div className="board-chart"><Chart option={option} onChartReady={(chart) => { chartRef.current = chart; }} style={{ height: "100%", width: "100%" }} notMerge /></div> : <div className="report-empty">{datasetId ? text("当前数据集还没有图表，手动添加图表或导入AI推荐。", "No charts for this dataset yet. Create a chart or import an AI recommendation.") : text("选择数据集，手动添加图表或导入AI推荐。", "Select a dataset, then create a chart or import an AI recommendation.")}</div>}
         <div className="board-footer"><span>{rows.length} {text("源数据行", "source rows")}</span><span>{selected ? `${selected.category} · ${selected.metric || text("记录数", "Records")} · ${aggregationLabels[selected.aggregation]}` : ""}</span></div>
       </section>
     </div>

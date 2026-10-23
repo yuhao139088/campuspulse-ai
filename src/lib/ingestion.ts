@@ -9,6 +9,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { aiConfig, uploadConfig } from "./system-config";
 import { ApiError } from "./errors";
+import { normalizeExtractedFields } from "./extract-normalize";
 
 export async function ingestFile(file: File, locale: string = "zh") {
   const limits = await uploadConfig();
@@ -46,13 +47,15 @@ export async function ingestFile(file: File, locale: string = "zh") {
   if (!["png", "jpg", "jpeg", "webp"].includes(extension ?? "")) throw new ApiError(400, "Supported formats: CSV, Excel, PNG, JPEG, WebP");
   if (!limits.imagesEnabled) throw new ApiError(403, "Image imports are disabled by the system administrator");
   const contentType = extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : "image/jpeg";
-  let extracted: { text?: string; fields?: Record<string, string>; confidence?: number } = {};
+  let extracted: { text?: string; fields?: Record<string, unknown>; confidence?: number } = {};
   let method = "vision-model";
+  let visionFailure = "";
   try {
-    const response = await callAI([{ role: "system", content: "Read image text exactly; never guess. Return JSON {text:string,fields:object,confidence:number}. Include all readable text and relevant fields." }, { role: "user", content: [{ type: "image_url", image_url: { url: "data:" + contentType + ";base64," + bytes.toString("base64") } }] }], { json: true });
+    const response = await callAI([{ role: "system", content: "Read image text exactly; never guess. Return JSON {text:string,fields:object,confidence:number}. If the image contains a table, put it in fields.table as an array holding one object per data row keyed by the header cells, and keep every other field a scalar string. Include all readable text." }, { role: "user", content: [{ type: "image_url", image_url: { url: "data:" + contentType + ";base64," + bytes.toString("base64") } }] }], { json: true });
     extracted = JSON.parse(response.content);
     if (!extracted.text?.trim()) throw new Error("No OCR text");
-  } catch {
+  } catch (problem) {
+    visionFailure = problem instanceof Error ? problem.message : "vision model unavailable";
     method = "tesseract-and-ai";
     const directory = await mkdtemp(join(tmpdir(), "campuspulse-ocr-"));
     try {
@@ -61,12 +64,23 @@ export async function ingestFile(file: File, locale: string = "zh") {
       await writeFile(input, bytes);
       await promisify(execFile)(process.env.TESSERACT_PATH ?? "tesseract", [input, output, "-l", "chi_sim+eng"], { timeout: 45000 });
       extracted = { text: (await readFile(output + ".txt", "utf8")).trim(), fields: {} };
-      if (!extracted.text) throw new Error("No readable text found in this image");
-      const response = await callAI([{ role: "system", content: "Extract structured fields from this OCR text in " + locale + ". Do not invent text. Return JSON {text:string,fields:object}." }, { role: "user", content: extracted.text }], { json: true });
-      const structured = JSON.parse(response.content);
+      if (!extracted.text) throw new ApiError(422, "No readable text found in this image / 未能从图片中识别出文字");
+      let structured: { fields?: Record<string, unknown> };
+      try {
+        const response = await callAI([{ role: "system", content: "Extract structured fields from this OCR text in " + locale + ". If the text contains a table, put it in fields.table as an array holding one object per data row keyed by the header cells, and keep every other field a scalar string. Do not invent text. Return JSON {text:string,fields:object}." }, { role: "user", content: extracted.text }], { json: true });
+        structured = JSON.parse(response.content);
+      } catch {
+        throw new ApiError(503, "AI service unavailable for image extraction (" + visionFailure + ") / AI 服务暂不可用，无法结构化图片内容");
+      }
       extracted.fields = structured.fields && typeof structured.fields === "object" ? structured.fields : {};
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
-  const rows = Object.keys(extracted.fields ?? {}).length ? [extracted.fields as DataRow] : [];
-  return { sourceType: "IMAGE" as const, rows, columns: Object.keys(rows[0] ?? {}), profile: inspectDataset(rows), dictionary: Object.keys(rows[0] ?? {}).map((field) => ({ field, meaning: field, type: "text" })), summary: extracted.text ?? "", duplicates: 0, mode: "live", ocr: { ...extracted, method, model: (await aiConfig()).visionModel }, bytes, contentType };
+  const normalized = normalizeExtractedFields(extracted.fields);
+  if (normalized.rows.length > limits.maxRows) throw new ApiError(413, "Dataset exceeds the configured row limit: " + limits.maxRows);
+  if (normalized.columns.length > limits.maxColumns) throw new ApiError(400, "Column headers must be unique, maximum " + limits.maxColumns);
+  const rows = normalized.rows as DataRow[];
+  const columns = normalized.columns;
+  const profile = inspectDataset(rows);
+  const dictionary = columns.map((field) => ({ field, meaning: field, type: profile.numericColumns.includes(field) ? "number" : "text" }));
+  return { sourceType: "IMAGE" as const, rows, columns, profile, dictionary, summary: extracted.text ?? "", duplicates: 0, mode: "live", ocr: { ...extracted, method, model: (await aiConfig()).visionModel }, bytes, contentType };
 }

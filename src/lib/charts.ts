@@ -7,7 +7,7 @@ export type ChartSettings = {
 };
 
 export type ChartRecommendation = ChartSettings & { reason: string };
-export type CanvasChart = ChartSettings & { id: string };
+export type CanvasChart = ChartSettings & { id: string; datasetId: string };
 
 export function chartSignature(chart: ChartSettings) {
   return JSON.stringify([chart.type, chart.category, chart.metric, chart.aggregation]);
@@ -43,8 +43,40 @@ export function normalizeChartRecommendations(value: unknown, columns: string[],
   return recommendations;
 }
 
-export function importChartRecommendations(charts: CanvasChart[], recommendations: ChartRecommendation[], createId: () => string) {
-  const signatures = new Set(charts.map(chartSignature));
+export function chartsForDataset(charts: CanvasChart[], datasetId: string) {
+  return datasetId ? charts.filter((chart) => chart.datasetId === datasetId) : [];
+}
+
+export function chartMatchesColumns(chart: ChartSettings, columns: string[]) {
+  if (!columns.includes(chart.category)) return false;
+  return chart.aggregation === "count" || chart.metric === "" || columns.includes(chart.metric);
+}
+
+export function normalizeCanvasCharts(value: unknown, fallbackDatasetId: string): CanvasChart[] {
+  if (!Array.isArray(value)) return [];
+  const charts: CanvasChart[] = [];
+  const ids = new Set<string>();
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const input = candidate as Record<string, unknown>;
+    if (typeof input.id !== "string" || !input.id.trim() || ids.has(input.id)) continue;
+    if (typeof input.title !== "string" || !input.title.trim()) continue;
+    if (input.type !== "bar" && input.type !== "line" && input.type !== "pie") continue;
+    if (typeof input.category !== "string" || !input.category.trim()) continue;
+    if (input.aggregation !== "sum" && input.aggregation !== "average" && input.aggregation !== "count") continue;
+    const metric = typeof input.metric === "string" ? input.metric.trim() : "";
+    if (input.aggregation !== "count" && !metric) continue;
+    const datasetId = typeof input.datasetId === "string" && input.datasetId.trim() ? input.datasetId.trim() : fallbackDatasetId;
+    if (!datasetId) continue;
+    ids.add(input.id);
+    charts.push({ id: input.id.trim(), title: input.title.trim().slice(0, 120), type: input.type, category: input.category.trim(), metric: input.aggregation === "count" ? "" : metric, aggregation: input.aggregation, datasetId });
+    if (charts.length === 30) break;
+  }
+  return charts;
+}
+
+export function importChartRecommendations(charts: CanvasChart[], recommendations: ChartRecommendation[], createId: () => string, datasetId: string) {
+  const signatures = new Set(chartsForDataset(charts, datasetId).map(chartSignature));
   const added: CanvasChart[] = [];
   for (const recommendation of recommendations) {
     if (charts.length + added.length >= 30) break;
@@ -52,15 +84,17 @@ export function importChartRecommendations(charts: CanvasChart[], recommendation
     if (signatures.has(signature)) continue;
     signatures.add(signature);
     const { title, type, category, metric, aggregation } = recommendation;
-    added.push({ id: createId(), title, type, category, metric, aggregation });
+    added.push({ id: createId(), title, type, category, metric, aggregation, datasetId });
   }
   return { charts: [...charts, ...added], added };
 }
 
+const axisLabel = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : typeof value === "number" || typeof value === "boolean" ? String(value) : "—");
+
 export function chartData(rows: Record<string, unknown>[], chart: ChartSettings) {
   const groups = new Map<string, { sum: number; count: number }>();
   for (const row of rows) {
-    const label = String(row[chart.category] ?? "—");
+    const label = axisLabel(row[chart.category]);
     const raw = row[chart.metric];
     const value = typeof raw === "number" ? raw : typeof raw === "string" && raw.trim() ? Number(raw) : NaN;
     if (chart.aggregation !== "count" && !Number.isFinite(value)) continue;
