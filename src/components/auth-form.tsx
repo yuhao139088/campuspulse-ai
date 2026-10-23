@@ -7,8 +7,9 @@ import { verifyHuman } from "@/lib/captcha-client";
 import { FactorDialog } from "@/components/factor-dialog";
 import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/phone-input";
+import { GithubMark } from "@/components/github-mark";
 import { validateAuthFields, type AuthFieldErrors } from "@/lib/auth-validation";
-type Features = { passwordLogin: boolean; phoneLogin: boolean; smsEnabled: boolean; smsCountries?: string[]; emailVerification: boolean; registrationEnabled: boolean; site?: { name: string } };
+type Features = { passwordLogin: boolean; phoneLogin: boolean; smsEnabled: boolean; smsCountries?: string[]; emailVerification: boolean; registrationEnabled: boolean; githubLogin?: boolean; site?: { name: string } };
 export default function AuthForm({ mode }: { mode: "login" | "register" | "reset" }) {
   const router = useRouter();
   const [locale, setLocale] = useAppLocale();
@@ -117,6 +118,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" | "reset
       <button className="send-button auth-submit" disabled={busy || !features || (mode === "register" && !features.registrationEnabled)}><LockKeyhole size={14}/>{busy ? text("处理中…", "Processing…") : mode === "register" ? text("创建账号", "Create account") : mode === "reset" ? text("更新密码", "Update password") : text("登录", "Sign in")}</button>
       {mode === "register" && features && !features.registrationEnabled && <p>{text("管理员已暂停公开注册。", "Public registration is currently paused.")}</p>}
     </form>
+    {mode !== "reset" && features?.githubLogin && <button type="button" className="auth-github" disabled={busy} onClick={() => void signIn("github", { callbackUrl: "/dashboard" })}><GithubMark size={15}/>{mode === "register" ? text("使用 GitHub 注册", "Sign up with GitHub") : text("使用 GitHub 登录", "Continue with GitHub")}</button>}
     <div className="auth-foot"><a href={mode === "login" ? "/register" : "/login"}>{mode === "login" ? text("创建个人账号", "Create an account") : text("返回登录", "Back to sign in")}</a>{mode === "login" && <a href="/reset-password">{text("忘记密码", "Forgot password")}</a>}</div>
     {factor && <FactorDialog onCancel={() => { setFactor(null); setResetProof(""); setLoginProof(""); }} onVerify={async (value, captcha, captchaScope) => { if (factor === "login") await finishLogin(value, loginProof, captcha, captchaScope); else await resetPassword(value, captcha, captchaScope); }}/>} 
   </section></main>;

@@ -65,7 +65,7 @@ CARBON_AI_MODEL=your-chat-model
 
 ### 验证码与2FA
 
-配置SMTP后启用邮箱验证码，用户可在个人设置中绑定Microsoft Authenticator。手机服务支持阿里云号码认证（云端发送与核验）、互亿无线模板短信及标准HTTPS短信网关，提供手机注册/登录及邮箱账号绑定手机号；管理员可配置并测试真实发送，未配置时明确不可用。详情见[账号认证与系统配置](docs/authentication.md)。GitHub OAuth作为后续集成，目前不在公开登录界面启用。
+配置SMTP后启用邮箱验证码，用户可在个人设置中绑定Microsoft Authenticator。手机服务支持阿里云号码认证（云端发送与核验）、互亿无线模板短信及标准HTTPS短信网关，提供手机注册/登录及邮箱账号绑定手机号；管理员可配置并测试真实发送，未配置时明确不可用。详情见[账号认证与系统配置](docs/authentication.md)。GitHub 授权登录由系统管理员在后台填写 OAuth App 凭据后开启，用户可在设置页关联或解绑；已启用2FA的账号不支持 GitHub 登录，避免绕过第二步验证。
 
 登录先校验主凭据，已开启2FA时才弹出认证码/恢复码窗口。腾讯普通验证与无感验证分别接入发送和身份操作，详见[腾讯人机验证](docs/tencent-captcha.md)。
 

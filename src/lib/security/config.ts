@@ -5,7 +5,13 @@ export type SecurityConfig = {
   smtpHost: string; smtpPort: number; smtpSecure: boolean; smtpUser: string; smtpPassword?: string; smtpFrom: string;
   smsProvider: "gateway" | "ihuyi" | "aliyun"; smsAccount: string; smsUrl: string; smsToken?: string; smsTemplate: string; smsSign: string; smsScheme: string;
   smsTemplateChange: string; smsTemplateReset: string; smsTemplateBind: string; smsTemplateVerify: string;
+  githubEnabled: boolean; githubClientId: string; githubClientSecret?: string;
 };
+
+export function githubOAuth(config: SecurityConfig) {
+  if (!config.githubEnabled || !config.githubClientId || !config.githubClientSecret) return null;
+  return { clientId: config.githubClientId, clientSecret: config.githubClientSecret };
+}
 export async function securityConfig(): Promise<SecurityConfig> {
   const stored = await prisma.systemConfig.findUnique({ where: { id: "authentication" } });
   const value = stored?.value as Partial<SecurityConfig> | undefined;
@@ -33,5 +39,8 @@ export async function securityConfig(): Promise<SecurityConfig> {
     smsTemplateReset: value?.smsTemplateReset ?? process.env.SMS_TEMPLATE_RESET ?? "100003",
     smsTemplateBind: value?.smsTemplateBind ?? process.env.SMS_TEMPLATE_BIND ?? "100004",
     smsTemplateVerify: value?.smsTemplateVerify ?? process.env.SMS_TEMPLATE_VERIFY ?? "100005",
+    githubEnabled: value?.githubEnabled ?? Boolean(process.env.GITHUB_ID && process.env.GITHUB_SECRET),
+    githubClientId: value?.githubClientId ?? process.env.GITHUB_ID ?? "",
+    githubClientSecret: value?.githubClientSecret ? decryptSecret(value.githubClientSecret) : process.env.GITHUB_SECRET,
   };
 }

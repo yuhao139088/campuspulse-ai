@@ -93,7 +93,17 @@ Content-Type: application/json
 
 启用后所有密码和手机OTP登录均需TOTP或未使用恢复码；未完成第二因子不会发放登录会话。10个恢复码只在独立保存窗口显示一次，散列存储、每个限用一次；重新生成旧码全部失效。已登录用户可通过已有邮箱、手机或2FA方式完成安全操作，不需要当前密码。
 
-管理员关闭“允许用户启用2FA”只暂停新绑定，已经启用的2FA继续验证。GitHub授权登录按后续任务接入；当前不会以OAuth绕过已启用的2FA。
+管理员关闭“允许用户启用2FA”只暂停新绑定，已经启用的2FA继续验证。
+
+## GitHub 授权登录
+
+- 管理员在“系统配置 → 登录与注册”填写 GitHub OAuth App 的 Client ID 与 Client Secret 并打开开关；Client Secret 以 AES-256-GCM 加密后存库，界面只显示是否已配置。也可以改用环境变量 GITHUB_ID、GITHUB_SECRET，数据库配置优先。
+- GitHub OAuth App 的 Authorization callback URL 必须填写站点地址加 /api/auth/callback/github，例如 https://cam.yuhaocloud.cn/api/auth/callback/github。
+- 未配置或未开启时不注册 GitHub provider，/api/auth/features 返回 githubLogin:false，登录与注册页不显示 GitHub 按钮。
+- 登录规则：GitHub 账号已关联则直接进入对应账号；邮箱已存在但未关联时拒绝登录，必须先在设置页关联，避免用未验证邮箱接管账号；邮箱不存在时按“允许公开注册”创建账号，并调用 GitHub /user/emails 确认该邮箱已验证。
+- 已启用 2FA 的账号不允许 GitHub 登录或关联，避免 OAuth 绕过第二步验证。
+- 设置页“GitHub 授权登录”支持关联与解绑：两者都先经过身份验证弹窗（仅可用账号已绑定的邮箱/手机/2FA）和腾讯人机验证；关联使用 10 分钟有效、HMAC 签名的一次性 Cookie 绑定当前登录用户，解绑会提升 authVersion 撤销全部会话，且必须保留密码或手机号等其他登录方式。
+- 关联、登录、注册、授权与解绑都写入审计日志：account.github.link、account.github.signin、account.github.register、account.github.authorize、account.github.unlink。
 
 ## 密钥与配置维护
 

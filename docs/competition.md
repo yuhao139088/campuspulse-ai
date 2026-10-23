@@ -18,7 +18,7 @@ The project also includes workspace permissions, administrator configuration, pr
 
 ## Submission limitations stated honestly
 
-- GitHub OAuth is intentionally outside this competition release; email/password and configured verification methods are the demonstrated login paths.
+- GitHub OAuth sign-in becomes available once an administrator stores an OAuth App client ID and secret; email/password, phone codes and the configured verification methods remain the primary login paths.
 - Live provider keys, real user records, production URLs, and deployment secrets are not part of the package.
 - AI output is evidence-oriented. The demo uses original simulated data and clearly labels the demo path; generated recommendations do not replace human review.
 

@@ -4,10 +4,15 @@ import type { NextAuthOptions } from "next-auth";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { allowRequest } from "@/lib/rate-limit";
-import { securityConfig } from "@/lib/security/config";
+import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
+import { githubOAuth, securityConfig } from "@/lib/security/config";
 import { verifyFactor } from "@/lib/security/factor";
 import { normalizePhone, consumeCode, validateCode } from "@/lib/security/verification";
 import { captchaConfig, checkCaptchaGate, consumeCaptchaGate, requestIp } from "@/lib/security/captcha";
+import { verifyStateToken } from "@/lib/security/crypto";
+import { githubBindCookie, githubEmailVerified } from "@/lib/security/github";
+import { getPersonalSpace } from "@/lib/workspace";
 
 const demoEmail = process.env.DEMO_EMAIL ?? "demo@campuspulse.local";
 const demoPassword = process.env.DEMO_PASSWORD ?? "CampusPulse2026!";
@@ -16,7 +21,6 @@ const demoAuthEnabled = process.env.DEMO_AUTH_ENABLED === "true" || (process.env
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers: [
-    ...(process.env.GITHUB_ID && process.env.GITHUB_SECRET ? [GitHubProvider({ clientId: process.env.GITHUB_ID, clientSecret: process.env.GITHUB_SECRET })] : []),
     CredentialsProvider({
       name: "Email and password",
       credentials: { email: { label: "Email or phone", type: "text" }, password: { label: "Password", type: "password" }, totp: { label: "Authenticator code", type: "text" }, loginProof: { type: "text" } },
@@ -64,18 +68,44 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider !== "github") return true;
-      if (!user.email) return false;
+      const config = await securityConfig();
+      if (!githubOAuth(config)) return false;
+      const githubId = String(account.providerAccountId ?? "");
+      if (!user.email || !githubId) return false;
       const email = user.email.toLowerCase();
-      const existing = await prisma.user.findUnique({ where: { email } });
-      if (existing?.disabled || existing?.totpEnabled) return false;
-      if (existing?.passwordHash) {
-        const linked = await prisma.account.findUnique({ where: { provider_providerAccountId: { provider: "github", providerAccountId: account.providerAccountId } } });
-        if (!linked || linked.userId !== existing.id) return false;
+      const where = { provider_providerAccountId: { provider: "github", providerAccountId: githubId } };
+      const bind = verifyStateToken<{ purpose: string; userId: string }>((await cookies()).get(githubBindCookie)?.value ?? "", 600);
+      if (bind?.purpose === "github-bind") {
+        const session = await getServerSession(authOptions);
+        if (session?.user?.id !== bind.userId) return false;
+        const owner = await prisma.user.findUnique({ where: { id: bind.userId } });
+        if (!owner || owner.disabled || owner.totpEnabled) return false;
+        const conflict = await prisma.account.findUnique({ where });
+        if (conflict && conflict.userId !== owner.id) return false;
+        await prisma.account.upsert({ where, update: { userId: owner.id, type: account.type }, create: { userId: owner.id, provider: "github", providerAccountId: githubId, type: account.type, scope: typeof account.scope === "string" ? account.scope : null } });
+        try { (await cookies()).delete(githubBindCookie); } catch { /* cookie jar may be read-only here */ }
+        await recordGithubEvent(owner.id, "account.github.link");
+        user.id = owner.id;
+        user.authVersion = owner.authVersion;
+        return true;
       }
-      const saved = existing ?? await prisma.user.create({ data: { name: user.name, email, image: user.image } });
-      await prisma.account.upsert({ where: { provider_providerAccountId: { provider: "github", providerAccountId: account.providerAccountId } }, update: {}, create: { userId: saved.id, provider: "github", providerAccountId: account.providerAccountId, type: account.type } });
-      user.id = saved.id;
-      user.authVersion = saved.authVersion;
+      const linked = await prisma.account.findUnique({ where });
+      if (linked) {
+        const owner = await prisma.user.findUnique({ where: { id: linked.userId } });
+        if (!owner || owner.disabled || owner.totpEnabled) return false;
+        await recordGithubEvent(owner.id, "account.github.signin");
+        user.id = owner.id;
+        user.authVersion = owner.authVersion;
+        return true;
+      }
+      if (!config.registrationEnabled || await prisma.user.findUnique({ where: { email } })) return false;
+      if (!await githubEmailVerified(typeof account.access_token === "string" ? account.access_token : "", email)) return false;
+      const created = await prisma.user.create({ data: { name: user.name || email.split("@")[0], email, image: user.image } });
+      await getPersonalSpace(created.id);
+      await prisma.account.create({ data: { userId: created.id, provider: "github", providerAccountId: githubId, type: account.type, scope: typeof account.scope === "string" ? account.scope : null } });
+      await recordGithubEvent(created.id, "account.github.register");
+      user.id = created.id;
+      user.authVersion = created.authVersion;
       return true;
     },
     async jwt({ token, user }) {
@@ -94,4 +124,17 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
+
+async function recordGithubEvent(userId: string, action: string) {
+  try {
+    const space = await getPersonalSpace(userId);
+    await prisma.auditLog.create({ data: { userId, spaceId: space.id, action, detail: { provider: "github" } } });
+  } catch { /* audit failures must not block sign-in */ }
+}
+
+export async function buildAuthOptions(): Promise<NextAuthOptions> {
+  const github = githubOAuth(await securityConfig());
+  if (!github) return authOptions;
+  return { ...authOptions, providers: [GitHubProvider({ clientId: github.clientId, clientSecret: github.clientSecret, authorization: { params: { scope: "read:user user:email" } } }), ...authOptions.providers] };
+}
 

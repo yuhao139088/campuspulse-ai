@@ -2,7 +2,7 @@ import { z } from "zod";
 import { normalizePhone } from "../phone";
 
 export const securityIntentSchema = z.object({
-  action: z.enum(["setup", "disable", "recovery", "bind_phone", "bind_email", "verify_phone", "password"]),
+  action: z.enum(["setup", "disable", "recovery", "bind_phone", "bind_email", "verify_phone", "password", "bind_github"]),
   target: z.string().max(254).default(""),
   newPassword: z.string().max(72).default(""),
   code: z.string().max(6).default(""),

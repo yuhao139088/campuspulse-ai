@@ -16,10 +16,11 @@
 - [x] Reduced-motion behavior and responsive layouts
 - [x] Automated unit, typecheck, lint, production build, and browser smoke checks
 - [x] Technical document PDF and 5–8 minute Mandarin video script
+- [x] GitHub OAuth sign-in with administrator-configured credentials, account linking and unlinking
 
 ## Deliberately outside this release
 
-- [ ] GitHub OAuth provider integration
+- [ ] Third-party providers beyond GitHub
 
 The release does not include real credentials, production database records, browser authentication state, private deployment files, or unrelated reverse-proxy projects.
 

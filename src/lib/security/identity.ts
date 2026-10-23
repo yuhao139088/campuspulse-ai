@@ -1,5 +1,5 @@
 import type { User } from "@prisma/client";
-import type { SecurityConfig } from "./config";
+import { githubOAuth, type SecurityConfig } from "./config";
 import type { IdentityMethod, SecurityIntent } from "./intent";
 import { smsConfigured } from "./sms";
 import { ApiError } from "../errors";
@@ -25,4 +25,5 @@ export function validateSecurityAction(user: Pick<User, "phone" | "totpEnabled">
   if (intent.action === "verify_phone" && (!user.phone || intent.target !== user.phone)) throw new ApiError(403, "Only your linked phone can be verified");
   if (["bind_phone", "verify_phone"].includes(intent.action) && !smsConfigured(config)) throw new ApiError(503, "SMS verification is unavailable");
   if (["bind_phone", "bind_email", "verify_phone"].includes(intent.action) && !/^\d{6}$/.test(intent.code)) throw new ApiError(400, "Enter the six-digit contact verification code");
+  if (intent.action === "bind_github" && !githubOAuth(config)) throw new ApiError(403, "GitHub sign-in is not configured by the administrator / 管理员尚未配置 GitHub 授权登录");
 }

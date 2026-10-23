@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { signOut } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { ShieldCheck, Smartphone, Mail, KeyRound } from "lucide-react";
+import { GithubMark } from "@/components/github-mark";
 import { verifyHuman } from "@/lib/captcha-client";
 import { FactorDialog, RecoveryCodesDialog } from "@/components/factor-dialog";
 import { IdentityDialog } from "@/components/identity-dialog";
@@ -15,6 +16,7 @@ import { request, useResource, useText, Notice } from "./shared";
 
 type Security = { email: string | null; phone: string | null; totpEnabled: boolean; totpAllowed: boolean; smsEnabled: boolean; smsCountries?: string[]; methods: IdentityMethod[]; recoveryRemaining: number; emailVerified: boolean; phoneVerified: boolean };
 type ActionResult = { qr?: string; secret?: string; enrollmentProof?: string; recoveryCodes?: string[]; signInAgain?: boolean };
+type GithubStatus = { configured: boolean; linked: boolean; login: string | null; blockedBy2fa: boolean; redirectUri: string };
 
 export default function AccountSecurity() {
   const { text, locale } = useText();
@@ -33,6 +35,19 @@ export default function AccountSecurity() {
   const [failure, setFailure] = useState("");
   const [notice, setNotice] = useState("");
   const [signAgain, setSignAgain] = useState(false);
+  const [github, setGithub] = useState<GithubStatus | null>(null);
+  const [unlinkGithub, setUnlinkGithub] = useState(false);
+  const [githubOutcome, setGithubOutcome] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    request<GithubStatus>("/api/account/github").then((value) => {
+      if (!active) return;
+      setGithub(value);
+      setGithubOutcome(new URLSearchParams(window.location.search).get("github") ?? "");
+    }).catch(() => { if (active) setGithub(null); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!cooldown) return;
@@ -57,6 +72,21 @@ export default function AccountSecurity() {
   async function authorize(proof: string) {
     if (!intent) return;
     const pending = intent;
+    if (pending.action === "bind_github") {
+      setIntent(null); setBusy(true);
+      try {
+        const captcha = await verifyHuman("invisible", locale);
+        if (unlinkGithub) {
+          setUnlinkGithub(false);
+          await complete(await request<ActionResult>("/api/account/github", "DELETE", { proof, captcha, captchaScope: "invisible" }));
+        } else {
+          await request("/api/account/github", "POST", { proof, captcha, captchaScope: "invisible" });
+          await signIn("github", { callbackUrl: "/settings?github=linked" });
+        }
+      } catch (problem) { setFailure(String(problem)); setUnlinkGithub(false); }
+      finally { setBusy(false); }
+      return;
+    }
     if (pending.action === "password") { setIntent(null); setPasswordProof(proof); return; }
     setIntent(null); setBusy(true);
     try { await complete(await request<ActionResult>("/api/security", "POST", { intent: pending, proof })); }
@@ -109,11 +139,15 @@ export default function AccountSecurity() {
         <div className="security-block-footer"><p>{text("确认时可选择已绑定邮箱、手机号或2FA验证。", "Confirm using a linked email, phone or 2FA method.")}</p><button className="send-button" disabled={busy || code.length !== 6 || !target} onClick={() => start(verifyExistingPhone ? "verify_phone" : channel === "sms" ? "bind_phone" : "bind_email")}>{verifyExistingPhone ? text("确认验证", "Confirm verification") : text("确认绑定", "Confirm link")}</button></div>
       </section>
       <section className="security-block"><div className="security-block-heading"><h3><KeyRound size={18} />{text("修改密码", "Change password")}</h3><p>{text("先验证账号身份，再在独立窗口中设置新密码。", "Verify your identity, then set a new password in a separate window.")}</p></div><div className="security-block-actions"><button className="language-button" disabled={busy} onClick={() => start("password")}>{text("更新密码", "Update password")}</button></div></section>
+      <section className="security-block"><div className="security-block-heading"><h3><GithubMark size={18} />{text("GitHub 授权登录", "GitHub sign-in")}</h3><p>{github?.linked ? text("已关联 GitHub 账号，可在登录页直接使用 GitHub 登录；解绑会撤销所有登录会话。", "Your GitHub account is linked and available on the sign-in page. Unlinking revokes every session.") : text("关联后可在登录页使用 GitHub 直接进入账号，关联前需要验证当前身份。", "Link GitHub to sign in directly from the login page. Identity verification is required first.")}</p></div>
+        <div className="security-block-actions">{github?.linked ? <button className="language-button danger-button" disabled={busy} onClick={() => { setUnlinkGithub(true); start("bind_github"); }}>{text("解绑 GitHub", "Unlink GitHub")}{github.login ? " · " + github.login : ""}</button> : <button className="send-button" disabled={busy || !github?.configured || !!github?.blockedBy2fa} onClick={() => { setUnlinkGithub(false); start("bind_github"); }}>{text("关联 GitHub 账号", "Link GitHub account")}</button>}{!github?.configured && <small>{text("管理员尚未配置 GitHub OAuth 应用。", "The administrator has not configured the GitHub OAuth App.")}</small>}{github?.configured && github.blockedBy2fa && !github.linked && <small>{text("已启用2FA的账号不支持 GitHub 登录，避免绕过第二步验证。", "Accounts with 2FA cannot use GitHub sign-in because it would bypass the second factor.")}</small>}</div>
+      </section>
     </div>}
     {intent && <IdentityDialog intent={intent} onVerified={authorize} onCancel={() => setIntent(null)} />}
     {passwordProof && <PasswordDialog onSave={savePassword} onCancel={() => setPasswordProof("")} />}
     {enrolling && <FactorDialog enrollment onCancel={() => setEnrolling(false)} onVerify={confirmEnrollment} />}
     {backup.length > 0 && <RecoveryCodesDialog codes={backup} onClose={() => setBackup([])} />}
+    {githubOutcome && <div className="notice-card" role="status">{githubOutcome === "linked" ? text("GitHub 账号已关联，可在登录页直接使用 GitHub 登录。", "GitHub linked. Use Continue with GitHub on the sign-in page.") : text("GitHub 关联未完成：", "GitHub linking did not complete: ") + githubOutcome}</div>}
     {notice && <div className="notice-card" role="status">{notice}</div>}
   </section>;
 }

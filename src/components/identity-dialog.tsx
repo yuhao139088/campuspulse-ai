@@ -21,7 +21,7 @@ export function IdentityDialog({ intent, onVerified, onCancel }: { intent: Secur
   const [now, setNow] = useState(() => Date.now());
   const cooldown = method ? Math.max(0, Math.ceil(((cooldowns[method] ?? 0) - now) / 1000)) : 0;
   const labels = { email: text("邮箱验证码", "Email code"), sms: text("手机验证码", "Phone code"), totp: text("Authenticator认证码", "Authenticator code"), recovery: text("2FA恢复码", "2FA recovery code") };
-  const actions = { setup: text("开启2FA", "Set up 2FA"), disable: text("关闭2FA", "Disable 2FA"), recovery: text("更新恢复码", "Replace recovery codes"), password: text("修改密码", "Change password"), bind_email: text("修改邮箱", "Change email"), bind_phone: text("绑定或修改手机号", "Link or change phone"), verify_phone: text("验证已绑定手机号", "Verify linked phone") };
+  const actions = { setup: text("开启2FA", "Set up 2FA"), disable: text("关闭2FA", "Disable 2FA"), recovery: text("更新恢复码", "Replace recovery codes"), password: text("修改密码", "Change password"), bind_email: text("修改邮箱", "Change email"), bind_phone: text("绑定或修改手机号", "Link or change phone"), verify_phone: text("验证已绑定手机号", "Verify linked phone"), bind_github: text("关联 GitHub 账号", "Link GitHub account") };
   const current = methods.find((item) => item.id === method);
   const deliverable = method === "email" || method === "sms";
   const Icon = method === "email" ? Mail : method === "sms" ? Smartphone : KeyRound;
