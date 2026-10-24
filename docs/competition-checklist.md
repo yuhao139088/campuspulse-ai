@@ -22,5 +22,5 @@
 
 - [ ] Third-party providers beyond GitHub
 
-The release does not include real credentials, production database records, browser authentication state, private deployment files, or unrelated reverse-proxy projects.
+The release does not include provider keys, production database records, browser authentication state, private deployment files, or unrelated reverse-proxy projects; the only included credential is the competition reviewer demo account, disabled after the contest.
 

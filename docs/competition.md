@@ -19,6 +19,6 @@ The project also includes workspace permissions, administrator configuration, pr
 ## Submission limitations stated honestly
 
 - GitHub OAuth sign-in becomes available once an administrator stores an OAuth App client ID and secret; email/password, phone codes and the configured verification methods remain the primary login paths.
-- Live provider keys, real user records, production URLs, and deployment secrets are not part of the package.
+- Live provider keys, real user records and deployment secrets are not part of the package; the only included credential is a competition-only reviewer demo account on the deployed environment, rotated or disabled after the contest.
 - AI output is evidence-oriented. The demo uses original simulated data and clearly labels the demo path; generated recommendations do not replace human review.
 
