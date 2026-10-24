@@ -18,7 +18,7 @@ export default function AdminPage() {
   const isEn = locale === "en";
   const t = copy[locale];
   const [tab, setTab] = useState("overview");
-  const [members, setMembers] = useState<Member[]>([{ id: 1, name: "郑宇豪", email: "yuhao@campuspulse.local", role: "OWNER", status: "ACTIVE" }, { id: 2, name: "尤一龙", email: "yilong@campuspulse.local", role: "EDITOR", status: "ACTIVE" }, { id: 3, name: "高超", email: "gao@campuspulse.local", role: "EDITOR", status: "ACTIVE" }, { id: 4, name: "冯玉雷 / 张兴华", email: "advisor@campuspulse.local", role: "ADVISOR", status: "ACTIVE" }]);
+  const [members, setMembers] = useState<Member[]>([{ id: 1, name: "郑宇豪", email: "yuhao@campuspulse.local", role: "OWNER", status: "ACTIVE" }, { id: 2, name: "尤一龙", email: "yilong@campuspulse.local", role: "EDITOR", status: "ACTIVE" }, { id: 3, name: "关博然", email: "guan@campuspulse.local", role: "EDITOR", status: "ACTIVE" }, { id: 4, name: "冯玉雷 / 张兴华", email: "advisor@campuspulse.local", role: "ADVISOR", status: "ACTIVE" }]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
