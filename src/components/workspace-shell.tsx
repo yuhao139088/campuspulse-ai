@@ -13,7 +13,7 @@ const navigation = {
 } as const;
 
 const pageCopy = {
-  zh: { "/settings": ["系统设置", "管理个人偏好、工作空间默认值和 AI 服务连接状态。"], "/dashboard": ["总览", "把校园运营数据，转化成下一步行动。"], "/datasets": ["数据空间", "管理结构化数据与图片证据，保持每个结论都有来源。"], "/analysis": ["AI 分析", "把一个问题交给 Agent，得到可复核的答案，而不是一段无来源的生成文本。"], "/canvas": ["图表画布", "把 AI 推荐的图表组合成可分享、可导出的数据故事。"], "/reports": ["报告中心", "把分析结论整理成团队能审阅、能分享、能继续执行的双语交付物。"], "/admin": ["管理员空间", "管理成员、数据资产、AI 使用记录与工作空间安全策略。"] },
+  zh: { "/settings": ["系统设置", "管理个人偏好、工作空间默认值和 AI 服务连接状态。"], "/dashboard": ["总览", "把校园运营数据，转化成下一步行动。"], "/datasets": ["数据空间", "管理结构化数据与图片证据，保持每个结论都有来源。"], "/analysis": ["AI 分析", "把一个问题交给 Agent，得到可复核的答案，而不是一段无来源的生成文本。"], "/canvas": ["图表画布", "把 AI 推荐的图表组合成可分享、可导出的数据故事。"], "/reports": ["报告中心", "把分析结论整理成团队能审阅、能分享、能继续执行的双语报告。"], "/admin": ["管理员空间", "管理成员、数据资产、AI 使用记录与工作空间安全策略。"] },
   en: { "/settings": ["System settings", "Manage personal preferences, workspace defaults and AI service connections."], "/dashboard": ["Overview", "Turn campus operations data into the next best action."], "/datasets": ["Data spaces", "Manage structured data and image evidence with traceable conclusions."], "/analysis": ["AI analysis", "Give an operational question to the Agent and receive an auditable answer."], "/canvas": ["Chart canvas", "Compose AI-recommended charts into a shareable data story."], "/reports": ["Reports", "Turn analysis into bilingual deliverables your team can review and act on."], "/admin": ["Admin space", "Manage members, data assets, AI usage and workspace security policies."] },
 } as const;
 
