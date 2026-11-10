@@ -1,37 +1,36 @@
-# Nginx / 宝塔
+# Nginx 反向代理配置
 
-此站点使用独立配置，不覆盖宝塔其他网站。HTTP 仅保留 ACME 验证目录，其余请求重定向到 HTTPS。
+下面是 HTTPS 站点的参考配置。证书路径、域名、应用端口和 ACME 目录需按自己的服务器调整；不要覆盖同机其他网站配置。
 
-```nginx
-server {
-    listen 80;
-    server_name cam.yuhaocloud.cn;
-    root /www/wwwroot/cam.yuhaocloud.cn;
-    location /.well-known/acme-challenge/ { try_files $uri =404; }
-    location / { return 301 https://$host$request_uri; }
-}
-server {
-    listen 443 ssl;
-    server_name cam.yuhaocloud.cn;
-    ssl_certificate /etc/letsencrypt/live/cam.yuhaocloud.cn/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/cam.yuhaocloud.cn/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    client_max_body_size 21m;
-    location / {
-        proxy_cache off;
-        proxy_no_cache 1;
-        proxy_cache_bypass 1;
-        proxy_pass http://127.0.0.1:3100;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_read_timeout 600s;
-        proxy_send_timeout 600s;
+    server {
+        listen 80;
+        server_name example.com;
+        location /.well-known/acme-challenge/ { try_files $uri =404; }
+        location / { return 301 https://$host$request_uri; }
     }
-}
-```
 
-先执行 `nginx -t`，通过后 `nginx -s reload`。证书由 Certbot 自动续期，续期成功后 deploy hook reload Nginx。用户提供的 ZIP 仅含根证书，不能直接当作 HTTPS 站点证书。
+    server {
+        listen 443 ssl;
+        server_name example.com;
+        ssl_certificate     /path/to/fullchain.pem;
+        ssl_certificate_key /path/to/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        client_max_body_size 21m;
 
-本站必须关闭继承的代理缓存：部分宝塔全局配置开启 `proxy_cache cache_one`，会返回旧登录页，甚至缓存认证接口结果。不要仅对当前页面加随机查询参数；必须在站点location中显式关闭缓存，并验证敏感API匿名访问始终401。
+        location / {
+            proxy_cache off;
+            proxy_no_cache 1;
+            proxy_cache_bypass 1;
+            proxy_pass http://127.0.0.1:3100;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+    }
+
+将配置写入当前站点配置后，先运行 nginx -t；通过后再 reload。确认认证接口、用户设置和业务 API 不会命中继承的全局代理缓存。应用仅监听可信的本地地址，数据库及对象存储控制端口不要暴露给公网。
+
+证书私钥绝不可放入仓库。实际代理超时时间应与上传和 AI 请求预算一致，并通过负载测试校验。

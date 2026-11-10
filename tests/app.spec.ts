@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function login(page: Page, callbackUrl = "/dashboard") {
   await page.goto(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   await page.locator('input[autocomplete="username"]').fill("demo@campuspulse.local");
-  await page.locator('input[type="password"]').fill("CampusPulse2026!");
+  await page.locator('input[type="password"]').fill("playwright-only-secret");
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${callbackUrl.replaceAll("/", "\\/")}$`));
 }

@@ -1,66 +1,50 @@
 # 生产部署与维护
 
-## 当前架构
+生产部署使用独立应用服务、PostgreSQL、私有对象存储和 HTTPS 反向代理。域名、端口、账号凭据及证书私钥由运营者在服务器侧维护，不写入项目仓库。
 
-CentOS Stream 9、Nginx/宝塔、systemd、PostgreSQL 16、Garage 2.4.1私有S3存储、Tesseract中英文OCR。域名 `cam.yuhaocloud.cn`，正式环境 `DEMO_AUTH_ENABLED=false`。
+## 部署前
 
-| 项目 | 位置 |
-| --- | --- |
-| 当前源码 | /opt/campuspulse/app |
-| 独立构建 | /opt/campuspulse/releases/<release-id> |
-| 运行版本 | /opt/campuspulse/runtime/<release-id> |
-| 当前版本链接 | /opt/campuspulse/current |
-| 应用/对象服务 | campuspulse-app / campuspulse-storage |
-| 应用环境 | /etc/campuspulse/app.env，root:campuspulse 0640 |
-| 数据库 | 127.0.0.1:5432 |
-| 私有S3 | 127.0.0.1:3900 |
-| 应用端口 | 127.0.0.1:3100 |
-| Nginx站点 | /www/server/panel/vhost/nginx/cam.yuhaocloud.cn.conf |
-| 站点证书 | /etc/letsencrypt/live/cam.yuhaocloud.cn/ |
-| 文件对象 | /var/lib/campuspulse/garage |
+1. 准备受支持的 Node.js 运行环境、PostgreSQL 和持久化 S3 兼容存储。
+2. 准备环境变量；至少包括数据库连接、会话密钥和对象存储访问参数。
+3. 按需要配置 AI、OCR、SMTP、短信、OAuth 和人机验证服务。
+4. 为数据库和对象文件建立可恢复备份，确认保留周期及权限。
+5. 检查依赖、Git 状态、迁移兼容性和公开材料，确保没有真实凭据。
 
-应用由独立低权限账号运行，systemd限制写入路径及内存。其他已有服务和网站配置保持独立。数据库和存储监听本机，不对外开放。
+## 本地部署步骤
+
+    npm ci
+    npm run db:generate
+    npm run db:validate
+    npx prisma migrate deploy
+    npm run typecheck
+    npm run lint
+    npm test
+    npm run build
+
+启动前配置生产环境变量，并按平台说明部署 Next.js standalone 产物或受支持的 Node.js 服务。不要将 .env、证书私钥、数据库 dump 或对象存储密钥复制到公开构建产物。
 
 ## 版本发布
 
-上传源码时排除 `.env`及其他私密配置、`.git`、`node_modules`、`.next`、`.deployment-private`、所有测试结果/浏览器追踪。先备份数据库和对象，再执行：
+部署前先同步源码，再在隔离的 release 目录安装锁定依赖、生成 Prisma Client、执行数据库迁移并构建。只有构建与健康检查成功后才切换运行版本。失败时回退应用版本；已提交的数据库迁移不会因代码回退自动撤销，因此迁移应保持兼容。
 
-```bash
-sh /opt/campuspulse/app/tools/server-release.sh
-```
+本项目服务器维护脚本位于 tools/server-release.sh。该脚本依赖目标服务器的目录、权限、环境变量和服务配置，只能在确认目标主机与备份状态后执行。
 
-脚本在新目录安装构建依赖（`npm ci --include=dev`）、生成Prisma客户端、应用迁移并构建。运行版本包含standalone、public、静态资源及可写cache目录；构建成功才切换current并重启。健康失败回滚运行版本链接。回滚代码不会撤销数据库迁移，因此迁移必须保持向后兼容。
+## 配置与安全
 
-2GB服务器使用两个构建CPU和1024MB构建堆，运行堆512MB，应用MemoryMax768MB。不得在运行目录直接构建/删除`.next`；这会导致静态资源丢失及systemd NAMESPACE错误。
+SMTP、短信、AI、OAuth 与人机验证凭据只由服务器环境或加密的平台配置提供。管理页面可以保存服务配置，但不应回显密钥。
 
-生产Nginx站点显式 `proxy_cache off`、`proxy_no_cache 1`、`proxy_cache_bypass 1`，防止继承全局缓存造成旧登录页或身份数据泄漏。HTTP重定向HTTPS，保留ACME验证路径。
+生产环境必须设置 `DEMO_AUTH_ENABLED=false`。Demo 登录只允许用于隔离的本地测试环境，且必须显式提供 `DEMO_EMAIL` 与 `DEMO_PASSWORD`；源码不包含默认 demo 凭据。
 
-## 系统配置与AI
+由会话密钥派生的配置加密密钥需要安全备份。密钥轮换前确认现存加密数据和 TOTP 密钥能够迁移，避免服务启动后无法解密旧值。
 
-系统管理员在全站配置中心维护网站、注册、登录、邮件、短信、AI模型和导入限制。SMTP/AI/SMS配置保存数据库即时生效。初始AI从 `CARBON_AI_API_KEY` / `CARBON_AI_BASE_URL` / `CARBON_AI_MODEL` 加载。支持单独设置视觉模型。
+反向代理使用 HTTPS，禁用对认证和用户私有 API 的缓存，仅把请求转发到受限的应用监听地址。数据库和对象存储管理接口应限制在可信网络范围内。
 
-基础设施连接和 `NEXTAUTH_SECRET` 仍由服务环境管理。该会话密钥同时派生配置/TOTP加密密钥，必须备份；不要直接更换使现有密钥无法解密。GitHubOAuth按后续集成任务启用。
+## 健康检查与日志
 
-详见 [认证配置](authentication.md) 和 [Nginx配置](nginx-baota.md)。生产不得使用固定验证码、静态报告、公开演示密码或伪造短信发送成功。
+部署后检查应用服务状态、数据库连接、对象存储、登录页和 /api/health。检查日志时不得复制密码、验证码、授权头、会话 Cookie 或供应商密钥到工单或公开报告中。
 
-## 健康与维护
+## 备份恢复
 
-```bash
-systemctl status campuspulse-app campuspulse-storage postgresql
-curl --fail https://cam.yuhaocloud.cn/api/health
-journalctl -u campuspulse-app -n 80 --no-pager
-nginx -t
-certbot renew --dry-run
-```
+数据库和对象文件必须一致备份；环境密钥按独立权限策略保存。恢复前先在隔离环境检查备份，并在维护窗口执行。验证数据库、文件对象、会话密钥及应用版本相互兼容后再恢复服务。
 
-健康检查真实访问数据库和对象桶；AI是否配置并不代表上游永远可用，后台提供真实连接测试。Nginx代理等待600秒；Agent设置总时间预算，导入最大20MB/20000行/150列，可在后台降低。
-
-## 备份与恢复
-
-`/usr/local/sbin/campuspulse-backup` 创建root私有备份，包含PostgreSQL dump、Garage对象数据及环境配置。定时任务在 `/etc/cron.d/campuspulse-backup`，每日03:23执行，保留7天。一致备份期间暂时停应用/存储，避免与验收测试并行；恢复启动由trap保障。
-
-恢复需先停应用与存储，在单独维护环境验证数据库dump与对象数据一致性，再恢复生产环境。必须保留相同的会话/加密密钥和对象桶。备份不是公开项目内容，不得加入Git或源码发布包。旧runtime目录用于代码回滚，验证新版本稳定后再按明确目录清理历史构建。
-
-## 容器部署
-
-Dockerfile提供Node22、Tesseract及standalone服务。Docker Compose提供应用和PostgreSQL，私有S3需另行配置持久化服务；生产数据库与对象存储不能使用临时容器文件系统。所有凭据由环境注入。
+更多配置见认证说明、安全说明与 Nginx 配置示例。

@@ -16,3 +16,10 @@ test-results-production/
 .secret.tmp
 .preview-logs/
 .deployment-private/
+output/video/
+output/pdf/
+
+# Local-only working artifacts (PDF review renders, Python bytecode)
+tmp/
+__pycache__/
+*.pyc

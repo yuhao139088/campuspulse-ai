@@ -1,3 +1,5 @@
-# Asset audit placeholder
+# Local asset audit utility
 
-This folder is reserved for developer-only checks against the local watermarks-remover service. It must never be exposed as a user-facing CampusPulse feature or used to process content without authorization.
+This directory contains developer-only asset inspection tooling. It is not part of the CampusPulse AI product or its user workflows.
+
+Run it only against files you own or are authorized to inspect. Do not place credentials, personal data, or production uploads in this directory. Do not include local service configuration or private output in public releases.

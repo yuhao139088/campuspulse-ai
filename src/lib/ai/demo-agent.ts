@@ -1,4 +1,4 @@
-import { aggregateMetrics, createActionPlan, detectAnomalies, inspectDataset, type DataRow } from "./tools";
+import { aggregateMetrics, detectAnomalies, inspectDataset, type DataRow } from "./tools";
 
 const demoRows: DataRow[] = [
   { activity: "迎新分享会", month: "2026-06", registered: 96, checkedIn: 82, satisfaction: 4.6, budget: 1800 },
@@ -82,7 +82,7 @@ export function runDemoAgent(prompt: string, locale: "zh" | "en") {
     profile,
     metrics: { registration, attendance, conversion },
     anomalies: selectedAnomalies,
-    actionPlan: isAction ? actionPlan : actionPlan.length ? actionPlan : createActionPlan(anomalies, locale),
+    actionPlan,
     confidence: isBudget || isSatisfaction ? 0.88 : 0.91,
     queryType: isBudget ? "budget" : isSatisfaction ? "satisfaction" : isAction ? "action-plan" : isAnomaly ? "anomaly" : "overview",
   };

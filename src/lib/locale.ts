@@ -20,6 +20,10 @@ export function useAppLocale() {
   const [locale, setLocale] = useState<Locale>("zh");
 
   useEffect(() => {
+    document.documentElement.lang = locale === "en" ? "en" : "zh-CN";
+  }, [locale]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => setLocale(readLocale()), 0);
     if (!window.localStorage.getItem(localeStorageKey)) fetch("/api/auth/features").then((response) => response.json()).then((data) => { if (!window.localStorage.getItem(localeStorageKey) && data.site?.defaultLocale === "en") writeLocale("en"); }).catch(() => undefined);
     const handleChange = (event: Event) => {

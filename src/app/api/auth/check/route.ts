@@ -13,8 +13,10 @@ export async function POST(request: Request) {
     const data = z.object({ channel: z.enum(["email", "sms"]), target: z.string().trim().max(254), password: z.string().max(128).default(""), code: z.string().max(6).default(""), captcha: z.unknown().optional(), captchaScope: z.enum(["normal", "invisible"]).default("invisible"), factorStage: z.boolean().default(false), loginProof: z.string().max(128).default("") }).parse(await request.json());
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
     if (!allowRequest("login-check-ip:" + ip, 30, 60000) || !allowRequest("login-check:" + data.target.toLowerCase(), 12, 60000)) throw new ApiError(429, "Too many sign-in attempts / 登录尝试过于频繁");
+    const demoEmail = process.env.DEMO_EMAIL?.trim();
+    const demoPassword = process.env.DEMO_PASSWORD;
+    if (process.env.DEMO_AUTH_ENABLED === "true" && demoEmail && demoPassword && data.channel === "email" && data.target.toLowerCase() === demoEmail.toLowerCase() && data.password === demoPassword) return NextResponse.json({ requires2FA: false });
     const verified = await verifyCaptcha(request.headers, data.captcha, data.captchaScope);
-    if (process.env.DEMO_AUTH_ENABLED === "true" && data.channel === "email" && data.target.toLowerCase() === (process.env.DEMO_EMAIL ?? "demo@campuspulse.local").toLowerCase() && data.password === (process.env.DEMO_PASSWORD ?? "CampusPulse2026!")) return NextResponse.json({ requires2FA: false });
     const target = data.target.includes("@") ? data.target.toLowerCase() : normalizePhone(data.target);
     const user = await prisma.user.findFirst({ where: target.includes("@") ? { email: target } : { phone: target } });
     if (!user || user.disabled) throw new ApiError(401, "Account or sign-in credentials invalid / 账号或登录凭据无效");

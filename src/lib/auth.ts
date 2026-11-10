@@ -14,8 +14,8 @@ import { verifyStateToken } from "@/lib/security/crypto";
 import { githubBindCookie, githubEmailVerified } from "@/lib/security/github";
 import { getPersonalSpace } from "@/lib/workspace";
 
-const demoEmail = process.env.DEMO_EMAIL ?? "demo@campuspulse.local";
-const demoPassword = process.env.DEMO_PASSWORD ?? "CampusPulse2026!";
+const demoEmail = process.env.DEMO_EMAIL?.trim() ?? "";
+const demoPassword = process.env.DEMO_PASSWORD ?? "";
 const demoAuthEnabled = process.env.DEMO_AUTH_ENABLED === "true" || (process.env.NODE_ENV !== "production" && process.env.DEMO_AUTH_ENABLED !== "false");
 
 export const authOptions: NextAuthOptions = {
@@ -29,7 +29,7 @@ export const authOptions: NextAuthOptions = {
         const email = String(credentials.email).trim().toLowerCase();
         const password = String(credentials.password);
         if (!allowRequest("login:" + email, 12, 60000)) return null;
-        if (demoAuthEnabled && email === demoEmail.toLowerCase() && password === demoPassword) return { id: "demo-user", name: "郑宇豪", email: demoEmail };
+        if (demoAuthEnabled && demoEmail && demoPassword && email === demoEmail.toLowerCase() && password === demoPassword) return { id: "demo-user", name: "郑宇豪", email: demoEmail };
         try {
           const user = await prisma.user.findFirst({ where: email.includes("@") ? { email } : { phone: normalizePhone(email) } });
           if (!user || user.disabled || !user.passwordHash || !(await compare(password, user.passwordHash))) return null;
@@ -133,6 +133,7 @@ async function recordGithubEvent(userId: string, action: string) {
 }
 
 export async function buildAuthOptions(): Promise<NextAuthOptions> {
+  if (demoAuthEnabled) return authOptions;
   const github = githubOAuth(await securityConfig());
   if (!github) return authOptions;
   return { ...authOptions, providers: [GitHubProvider({ clientId: github.clientId, clientSecret: github.clientSecret, authorization: { params: { scope: "read:user user:email" } } }), ...authOptions.providers] };

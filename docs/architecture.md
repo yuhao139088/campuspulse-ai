@@ -1,18 +1,37 @@
-# CampusPulse AI Architecture
+# 系统架构与数据流
 
-## Runtime layers
+## 架构目标
 
-- **Presentation**: Next.js App Router, TypeScript, Tailwind CSS, Animate.css, Framer Motion and ECharts.
-- **AI orchestration**: the `/api/ai/analyze` route validates requests, selects demo/live mode and exposes a structured tool trace.
-- **Data intelligence**: `src/lib/ai/tools.ts` contains deterministic profiling, aggregation, anomaly detection and action-plan primitives.
-- **Ingestion**: `/api/data/preview` accepts CSV, Excel and images; tabular files are previewed with PapaParse/XLSX and images are queued for OCR evidence processing.
-- **Persistence**: Prisma models cover users, spaces, memberships, datasets, analyses, evidence and reports.
-- **Infrastructure**: PostgreSQL stores metadata, MinIO/S3 stores source objects, and the developer-only watermark audit service stays private.
+以 Web 工作台支持高校社团运营资料的导入、核验、分析与协作；确保服务端权限优先、文件来源可追溯、统计结果可复算。
 
-## Evidence-first AI contract
+## 分层结构
 
-Every live analysis must attach the dataset ID, selected fields, tool names, evidence references, confidence and locale to its persisted `Analysis` record. The model is instructed to separate facts, inferences and recommendations. The demo mode follows the same response shape so the presentation can run without external keys.
+1. 浏览器界面：Next.js App Router、React、TypeScript、Tailwind CSS 和 Apache ECharts。
+2. 业务 API：Route Handlers 校验输入、会话、空间成员角色和目标资源归属。
+3. 领域服务：表格解析、图像 OCR、AI Agent、确定性统计、图表/报告、账号安全和审计。
+4. 持久化：Prisma 与 PostgreSQL 保存业务记录；S3 兼容私有存储保存原文件。
+5. 外部适配：OpenAI-compatible 模型、邮件、短信、人机验证及 GitHub OAuth。
 
-## Motion system
+## 数据流
 
-Animate.css handles short entrance, status and feedback transitions. Framer Motion/React Bits are reserved for orchestration states, spotlight surfaces and canvas interactions. Global CSS disables non-essential animation when `prefers-reduced-motion: reduce` is active.
+    浏览器请求
+      → 服务端会话与空间授权
+      → 输入结构校验与资源归属检查
+      → PostgreSQL / 私有对象存储 / 已配置外部服务
+      → 结果归一化并保存来源、分析或审计记录
+
+上传先经过文件校验，再保存到私有对象存储。表格内容被解析成字段与数据行；图片内容经过 OCR/视觉识别和结构化校验。识别后的表格明细按行存储，同时保留原图与原始证据以便复核。
+
+## AI 分析
+
+服务端基于当前选择的数据集再次验证空间权限，向 Agent 提供受限字段与允许调用的工具。模型决定工具调用和语言解释；聚合、算术比率和异常候选由服务端代码计算。比率不自动证明业务语义；异常筛查以稳健统计生成待复核候选。分析记录保留实际调用轨迹。
+
+知识卡使用词项相关度排序，不是向量语义检索。模型置信度没有校准，异常只是候选而非因果结论。
+
+## 隔离与运维
+
+业务资源按用户会话、空间角色及目标资源归属授权。图表记录同时绑定数据集，避免不同来源复用字段。系统密钥不向空间管理员开放。生产日志与审计数据应避免包含口令、验证码和外部服务密钥。
+
+## 验证
+
+Vitest 覆盖领域逻辑与边界输入；TypeScript、ESLint 和生产构建检查类型、样式规则及发布构建；Playwright 检查主要浏览器流程与多视口布局。质量结论以实际测试输出为准。

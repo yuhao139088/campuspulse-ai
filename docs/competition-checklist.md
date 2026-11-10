@@ -1,26 +1,32 @@
-# Competition Delivery Checklist
+# 竞赛材料核对清单
 
-## Included in the submission
+## 项目与源码
 
-- [x] Public GitHub repository and project README
-- [x] Bilingual responsive product pages
-- [x] AI Agent workflow with structured tool trace and evidence references
-- [x] CSV, Excel, and image import preview entry points
-- [x] Data profiling, aggregation, anomaly detection, chart recommendation, and action-plan tools
-- [x] Prisma models and migrations for users, spaces, memberships, datasets, evidence, analyses, and reports
-- [x] `.env.example` containing placeholders only
-- [x] Dockerfile and Docker Compose for reproducible local deployment
-- [x] Original simulated data and reproducible test-material generation tools
-- [x] Private storage, workspace authorization, administrator controls, and audit-oriented security checks
-- [x] Bilingual reports with Markdown/DOCX export and print-to-PDF workflow
-- [x] Reduced-motion behavior and responsive layouts
-- [x] Automated unit, typecheck, lint, production build, and browser smoke checks
-- [x] Technical document PDF and 5–8 minute Mandarin video script
-- [x] GitHub OAuth sign-in with administrator-configured credentials, account linking and unlinking
+- [x] README 说明场景、使用方式、技术栈、运行步骤和能力边界。
+- [x] 代码、依赖锁文件及数据库迁移与当前作品介绍一致；完成干净依赖安装及生产构建。
+- [x] 环境模板只包含变量名和示例占位符，不含真实密钥。
+- [ ] Git 记录可读；提交内容仅属于 CampusPulse AI，不带入其他项目目录。
+- [x] 干净安装后类型检查、Lint、单测、浏览器端到端测试及生产构建全部通过。
 
-## Deliberately outside this release
+## 文档与媒体
 
-- [ ] Third-party providers beyond GitHub
+- [x] 作品介绍覆盖项目详情、使用方式、亮点、AI 技术落地、关键技术、项目图片、发表/获奖说明及项目来源。
+- [x] 作品介绍、技术说明和演示脚本 PDF 已生成并检查分页、字体及文本可读性；赛事上传格式仍须以当届平台要求为准。
+- [x] 新编材料不包含阶段性预评分数，不夸大未实现的向量检索、MCP、真实试点或模型精度。
+- [x] 演示视频副本为 H.264/AAC、1920×1080、30fps，时长约 7 分 57 秒；平台大小/时长上限仍须最终核对。
+- [x] 已抽查视频关键画面并遮挡配置页中的账号类信息；未发现密码、OTP、恢复码或服务密钥明文。
+- [x] 压缩包只包含源码、README、环境模板、作品介绍及演示视频；不含依赖目录、构建缓存、内部部署/安全文档、审阅帧或本地环境文件。ZIP 已验证可读取。
 
-The release does not include provider keys, production database records, browser authentication state, private deployment files, or unrelated reverse-proxy projects; the only included credential is the competition reviewer demo account, disabled after the contest.
+## 演示与复核
 
+- [ ] 先确认演示站可访问且评审账号可登录；GitHub 公开 README 的旧凭据完成人工轮换前不进行公开发布或线上更新。
+- [ ] 导入原创合成 CSV、XLSX 与 OCR 图片，核对记录数、字段及真实计算结果。
+- [ ] 查看 AI 工具轨迹与数据来源，人工核验重要结论。
+- [ ] 验证图表跟随当前数据集隔离，报告版本及任务功能正常。
+- [ ] 用普通账号验证空间数据隔离与角色权限。
+- [ ] 在桌面与窄屏检查导航、表格、图表、弹窗、错误提示和表单触控面积。
+- [ ] 评审凭据只通过受控渠道发送；结束后停用账号或轮换凭据。
+
+## 归档记录
+
+保存 Git 提交号、测试输出、PDF 页数及哈希、压缩包哈希、视频规格和最终文件清单。

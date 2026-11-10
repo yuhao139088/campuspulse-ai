@@ -1,24 +1,16 @@
-# Competition Delivery Notes
+# 竞赛项目说明
 
-## Submission scope
+CampusPulse AI 面向高校社团与校园组织运营，提供资料导入、AI 辅助分析、图表、报告及团队任务协作。项目重点是将分析过程与数据来源连接起来，方便成员复核。
 
-CampusPulse AI is an AI-first bilingual decision workspace for university club operations. The competition package contains the runnable source project, a public-facing README, a technical document PDF, a Mandarin video script, and original simulated test data. Internal deployment notes, production credentials, server addresses, browser state, security fixtures, private screenshots, and unrelated gateway projects are excluded.
+| 方向 | 当前实现 | 演示核验方式 |
+| --- | --- | --- |
+| AI 应用 | 模型工具规划、确定性数据计算、OCR 证据处理 | 选择数据集、查看工具轨迹并对照原始记录 |
+| 方案与交互 | 校园活动运营工作流、图片表格行展开、来源隔离画布 | 导入合成素材并切换数据集 |
+| 工程质量 | App Router、Prisma、PostgreSQL、私有对象存储与自动化测试 | 本地构建、测试及权限检查 |
+| 实用场景 | 数据分析衔接报告与行动任务 | 使用原创合成活动数据走通流程 |
+| 体验 | 中英界面、响应式布局和明确错误状态 | 桌面与手机视口浏览 |
+| 应用潜力 | 支持学生组织复盘和协作 | 验证功能，不把预期效果写成已证实成果 |
 
-## Competition alignment
+当前材料不宣称已完成真实校园规模试点、商业化验证或模型基准评测。知识检索是关键词相关排序；没有向量数据库或 MCP 协议实现。OCR、模型解释和异常候选均需要人工复核。
 
-The product demonstrates one complete AI workflow:
-
-1. Import CSV, Excel, and image evidence into a workspace.
-2. Profile fields and data quality with deterministic tools.
-3. Ask a natural-language question through an AI Agent.
-4. Show tool calls, evidence references, anomaly detection, confidence, and actions.
-5. Turn the result into charts, tasks, and bilingual reports.
-
-The project also includes workspace permissions, administrator configuration, private object storage integration, bilingual UI, responsive layouts, CAPTCHA-protected authentication, and audit-oriented security controls.
-
-## Submission limitations stated honestly
-
-- GitHub OAuth sign-in becomes available once an administrator stores an OAuth App client ID and secret; email/password, phone codes and the configured verification methods remain the primary login paths.
-- Live provider keys, real user records and deployment secrets are not part of the package; the only included credential is a competition-only reviewer demo account on the deployed environment, rotated or disabled after the contest.
-- AI output is evidence-oriented. The demo uses original simulated data and clearly labels the demo path; generated recommendations do not replace human review.
-
+项目运行命令及环境要求见 README。外部服务凭据由部署环境提供，不随公开仓库提交。赛事要求以主办方最新通知为准。
